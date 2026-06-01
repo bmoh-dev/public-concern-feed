@@ -159,6 +159,33 @@ export type Database = {
         }
         Relationships: []
       }
+      role_audit_log: {
+        Row: {
+          actor_admin_id: string
+          created_at: string
+          id: string
+          new_role: Database["public"]["Enums"]["app_role"] | null
+          previous_role: Database["public"]["Enums"]["app_role"] | null
+          target_user_id: string
+        }
+        Insert: {
+          actor_admin_id: string
+          created_at?: string
+          id?: string
+          new_role?: Database["public"]["Enums"]["app_role"] | null
+          previous_role?: Database["public"]["Enums"]["app_role"] | null
+          target_user_id: string
+        }
+        Update: {
+          actor_admin_id?: string
+          created_at?: string
+          id?: string
+          new_role?: Database["public"]["Enums"]["app_role"] | null
+          previous_role?: Database["public"]["Enums"]["app_role"] | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
