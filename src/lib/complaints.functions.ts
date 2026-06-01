@@ -128,7 +128,7 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     let q = supabaseAdmin
       .from("complaints")
-      .select("id, title, category, status, address, description, internal_notes, created_at, user_id, profiles:user_id(full_name, email)")
+      .select("id, title, category, status, address, description, internal_notes, created_at, user_id")
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
     if (data.category) q = q.eq("category", data.category);
@@ -137,7 +137,16 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     if (data.search) q = q.or(`title.ilike.%${data.search}%,description.ilike.%${data.search}%,id.eq.${/^[0-9a-f-]{36}$/i.test(data.search) ? data.search : "00000000-0000-0000-0000-000000000000"}`);
     const { data: rows, error } = await q.limit(500);
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const userIds = Array.from(new Set((rows ?? []).map((r) => r.user_id)));
+    let profilesMap = new Map<string, { full_name: string | null; email: string | null }>();
+    if (userIds.length) {
+      const { data: profs } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      profilesMap = new Map((profs ?? []).map((p) => [p.id, { full_name: p.full_name, email: p.email }]));
+    }
+    return (rows ?? []).map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null }));
   });
 
 export const adminMetrics = createServerFn({ method: "GET" })
