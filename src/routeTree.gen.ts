@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSubmitRouteImport } from './routes/_authenticated/submit'
 import { Route as AuthenticatedMyComplaintsRouteImport } from './routes/_authenticated/my-complaints'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -52,22 +53,29 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/submit': typeof AuthenticatedSubmitRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/submit': typeof AuthenticatedSubmitRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -75,15 +83,30 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/_authenticated/submit': typeof AuthenticatedSubmitRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/feed' | '/login' | '/admin' | '/my-complaints' | '/submit'
+  fullPaths:
+    | '/'
+    | '/feed'
+    | '/login'
+    | '/admin'
+    | '/my-complaints'
+    | '/submit'
+    | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/feed' | '/login' | '/admin' | '/my-complaints' | '/submit'
+  to:
+    | '/'
+    | '/feed'
+    | '/login'
+    | '/admin'
+    | '/my-complaints'
+    | '/submit'
+    | '/admin/users'
   id:
     | '__root__'
     | '/'
@@ -93,6 +116,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/my-complaints'
     | '/_authenticated/submit'
+    | '/_authenticated/admin/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -153,17 +177,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedMyComplaintsRoute: typeof AuthenticatedMyComplaintsRoute
   AuthenticatedSubmitRoute: typeof AuthenticatedSubmitRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedMyComplaintsRoute: AuthenticatedMyComplaintsRoute,
   AuthenticatedSubmitRoute: AuthenticatedSubmitRoute,
 }

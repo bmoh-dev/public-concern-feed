@@ -96,8 +96,16 @@ function AdminPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">لوحة الإدارة</h1>
-      <p className="text-sm text-muted-foreground">إدارة شكاوى المواطنين وتحديث حالاتها.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">لوحة الإدارة</h1>
+          <p className="text-sm text-muted-foreground">إدارة شكاوى المواطنين وتحديث حالاتها.</p>
+        </div>
+        <Button asChild variant="outline">
+          <a href="/admin/users">إدارة المستخدمين</a>
+        </Button>
+      </div>
+
 
       <div className="mt-4 grid gap-3 md:grid-cols-4">
         <Stat label="إجمالي الشكاوى" value={metrics?.total ?? "—"} />
