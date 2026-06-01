@@ -75,23 +75,23 @@ function AdminPage() {
     }
   };
 
-  const exportCsv = () => {
-    const headers = ["id", "title", "category", "status", "address", "citizen_name", "citizen_email", "created_at"];
-    const lines = [headers.join(",")];
-    for (const r of rows as any[]) {
-      const vals = [
-        r.id, r.title, r.category, r.status, r.address,
-        r.profiles?.full_name ?? "", r.profiles?.email ?? "", r.created_at,
-      ].map((v) => `"${String(v).replace(/"/g, '""')}"`);
-      lines.push(vals.join(","));
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `complaints-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const exportXlsx = () => {
+    const data = (rows as any[]).map((r) => ({
+      "رقم الشكوى": r.id,
+      "العنوان": r.title,
+      "الوصف": r.description,
+      "الفئة": CATEGORY_LABELS[r.category] ?? r.category,
+      "الحالة": STATUS_LABELS[r.status] ?? r.status,
+      "العنوان الجغرافي": r.address,
+      "اسم المواطن": r.profiles?.full_name ?? "",
+      "البريد الإلكتروني": r.profiles?.email ?? "",
+      "ملاحظات داخلية": r.internal_notes ?? "",
+      "تاريخ الإنشاء": new Date(r.created_at).toLocaleString("ar"),
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Complaints");
+    XLSX.writeFile(wb, `complaints-${Date.now()}.xlsx`);
   };
 
   return (
