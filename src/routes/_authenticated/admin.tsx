@@ -139,7 +139,7 @@ function AdminPage() {
         </Select>
         <Button onClick={applyBulk} disabled={selected.size === 0 || !bulkStatus}>تطبيق</Button>
         <div className="flex-1" />
-        <Button variant="outline" onClick={exportCsv}><Download className="ms-1 h-4 w-4" /> تصدير CSV</Button>
+        <Button variant="outline" onClick={exportXlsx}><Download className="ms-1 h-4 w-4" /> تصدير Excel</Button>
       </div>
 
       <div className="mt-4 overflow-x-auto rounded-xl border bg-card">
