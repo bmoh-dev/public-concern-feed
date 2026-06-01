@@ -164,7 +164,7 @@ export const adminUpdate = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const patch: Record<string, unknown> = {};
+    const patch: { status?: "pending" | "in_progress" | "resolved"; internal_notes?: string } = {};
     if (data.status) patch.status = data.status;
     if (data.internal_notes !== undefined) patch.internal_notes = data.internal_notes;
     if (Object.keys(patch).length === 0) return { updated: 0 };
