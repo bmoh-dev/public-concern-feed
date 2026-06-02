@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -19,9 +19,14 @@ import * as XLSX from "xlsx";
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: ({ location }) => requireAdminRoute(location),
   head: () => ({ meta: [{ title: "لوحة الإدارة | منصة الشكاوى" }] }),
-  component: AdminPage,
+  component: AdminRouteShell,
   errorComponent: ({ error }) => <div className="p-6 text-destructive">{error.message.includes("admin only") ? "غير مصرح: هذه الصفحة متاحة للمسؤولين فقط" : `خطأ: ${error.message}`}</div>,
 });
+
+function AdminRouteShell() {
+  const location = useLocation();
+  return location.pathname === "/admin" ? <AdminPage /> : <Outlet />;
+}
 
 function AdminPage() {
   const qc = useQueryClient();
