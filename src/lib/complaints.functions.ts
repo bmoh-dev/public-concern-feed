@@ -19,8 +19,14 @@ export const submitComplaint = createServerFn({ method: "POST" })
           z.object({
             storage_path: z.string().min(1).max(500),
             file_name: z.string().min(1).max(255),
-            mime_type: z.string().min(1).max(120),
-            size_bytes: z.number().int().min(0).max(8 * 1024 * 1024),
+            mime_type: z
+              .string()
+              .min(1)
+              .max(120)
+              .refine((m) => m.startsWith("image/") || m.startsWith("video/"), {
+                message: "Only images and videos are allowed",
+              }),
+            size_bytes: z.number().int().min(1).max(8 * 1024 * 1024),
           }),
         )
         .max(5)
