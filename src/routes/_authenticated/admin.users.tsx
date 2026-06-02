@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { searchUsers, changeUserRole } from "@/lib/users.functions";
+import { requireAdminRoute } from "@/lib/admin-route-guard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +21,13 @@ import { toast } from "sonner";
 import { Search, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
+  beforeLoad: ({ location }) => requireAdminRoute(location),
   head: () => ({ meta: [{ title: "إدارة المستخدمين | لوحة الإدارة" }] }),
   component: AdminUsersPage,
   errorComponent: ({ error }) => (
-    <div className="p-6 text-destructive">خطأ: {error.message}</div>
+    <div className="p-6 text-destructive">
+      {error.message.includes("admin only") ? "غير مصرح: هذه الصفحة متاحة للمسؤولين فقط" : `خطأ: ${error.message}`}
+    </div>
   ),
 });
 

@@ -7,28 +7,39 @@ import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search) => ({
+    redirect: typeof search.redirect === "string" && search.redirect.startsWith("/")
+      ? search.redirect
+      : "/my-complaints",
+  }),
   head: () => ({ meta: [{ title: "تسجيل الدخول | منصة الشكاوى" }] }),
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const redirectAfterAuth = () => {
+      supabase.auth.getUser().then(({ data, error }) => {
+        if (!error && data.user) navigate({ to: redirect as any, replace: true });
+      });
+    };
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/my-complaints", replace: true });
+      if (session) redirectAfterAuth();
     });
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/my-complaints", replace: true });
-    });
+    redirectAfterAuth();
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, redirect]);
 
   const signIn = async () => {
     setLoading(true);
+    const callbackUrl = new URL("/login", window.location.origin);
+    callbackUrl.searchParams.set("redirect", redirect);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/my-complaints",
+      redirect_uri: callbackUrl.toString(),
     });
     if (result.error) {
       toast.error("تعذّر تسجيل الدخول");
