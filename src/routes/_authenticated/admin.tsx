@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminListComplaints, adminMetrics, adminUpdate } from "@/lib/complaints.functions";
+import { requireAdminRoute } from "@/lib/admin-route-guard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,10 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  beforeLoad: ({ location }) => requireAdminRoute(location),
   head: () => ({ meta: [{ title: "لوحة الإدارة | منصة الشكاوى" }] }),
   component: AdminPage,
-  errorComponent: ({ error }) => <div className="p-6 text-destructive">خطأ: {error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-destructive">{error.message.includes("admin only") ? "غير مصرح: هذه الصفحة متاحة للمسؤولين فقط" : `خطأ: ${error.message}`}</div>,
 });
 
 function AdminPage() {
@@ -102,7 +104,7 @@ function AdminPage() {
           <p className="text-sm text-muted-foreground">إدارة شكاوى المواطنين وتحديث حالاتها.</p>
         </div>
         <Button asChild variant="outline">
-          <a href="/admin/users">إدارة المستخدمين</a>
+          <Link to="/admin/users">إدارة المستخدمين</Link>
         </Button>
       </div>
 
