@@ -212,41 +212,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_public_complaint: {
-        Args: { _id: string }
-        Returns: {
-          address: string
-          category: Database["public"]["Enums"]["complaint_category"]
-          created_at: string
-          description: string
-          id: string
-          status: Database["public"]["Enums"]["complaint_status"]
-          title: string
-        }[]
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
-      }
-      list_public_complaints: {
-        Args: {
-          _category?: Database["public"]["Enums"]["complaint_category"]
-          _limit?: number
-          _offset?: number
-          _search?: string
-        }
-        Returns: {
-          address: string
-          category: Database["public"]["Enums"]["complaint_category"]
-          created_at: string
-          description: string
-          id: string
-          status: Database["public"]["Enums"]["complaint_status"]
-          title: string
-        }[]
       }
     }
     Enums: {
