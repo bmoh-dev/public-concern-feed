@@ -134,11 +134,6 @@ function ComplaintDetailDialog({ id, onClose }: { id: string | null; onClose: ()
             </div>
             <Section title="العنوان">{data.address}</Section>
             <Section title="الوصف">{data.description}</Section>
-            {data.internal_notes && (
-              <Section title="ملاحظات إدارية">
-                <span className="rounded bg-info/10 p-2 text-info-foreground">{data.internal_notes}</span>
-              </Section>
-            )}
             {data.attachments?.length > 0 && (
               <div>
                 <h4 className="mb-2 text-sm font-semibold">المرفقات</h4>
