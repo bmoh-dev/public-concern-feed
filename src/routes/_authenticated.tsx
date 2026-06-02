@@ -111,14 +111,19 @@ function NotificationsMenu() {
   });
 
   useEffect(() => {
-    const channel = supabase
-      .channel("notif-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => {
-        qc.invalidateQueries({ queryKey: ["notifications"] });
-        qc.invalidateQueries({ queryKey: ["my-complaints"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      channel = supabase
+        .channel(`user:${uid}`, { config: { private: true } })
+        .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${uid}` }, () => {
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+          qc.invalidateQueries({ queryKey: ["my-complaints"] });
+        })
+        .subscribe();
+    });
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, [qc]);
 
   const unread = notifs.filter((n) => !n.read).length;
