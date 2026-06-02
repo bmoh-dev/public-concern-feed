@@ -112,18 +112,26 @@ function NotificationsMenu() {
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
       const uid = data.user?.id;
-      if (!uid) return;
+      if (!uid || cancelled) return;
+      // Remove any cached channel with the same topic (StrictMode / HMR)
+      const topic = `user:${uid}`;
+      for (const c of supabase.getChannels()) {
+        if (c.topic === `realtime:${topic}` || c.topic === topic) {
+          supabase.removeChannel(c);
+        }
+      }
       channel = supabase
-        .channel(`user:${uid}`, { config: { private: true } })
+        .channel(topic, { config: { private: true } })
         .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${uid}` }, () => {
           qc.invalidateQueries({ queryKey: ["notifications"] });
           qc.invalidateQueries({ queryKey: ["my-complaints"] });
         })
         .subscribe();
     });
-    return () => { if (channel) supabase.removeChannel(channel); };
+    return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
   }, [qc]);
 
   const unread = notifs.filter((n) => !n.read).length;
