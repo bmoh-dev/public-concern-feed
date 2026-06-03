@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/i18n";
 import { AttachmentThumb } from "./_authenticated/my-complaints";
 import { ShieldCheck, Search } from "lucide-react";
+import { PublicHeader } from "@/components/PublicHeader";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({
