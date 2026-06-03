@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ListChecks, FileText, Bell } from "lucide-react";
+import { PublicHeader } from "@/components/PublicHeader";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <PublicHeader />
       <main>
         <section className="border-b bg-gradient-to-b from-accent/40 to-background">
           <div className="container mx-auto max-w-6xl px-6 py-20 text-center">
@@ -62,22 +63,6 @@ function HomePage() {
   );
 }
 
-function Header() {
-  return (
-    <header className="border-b bg-card">
-      <div className="container mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link to="/" className="flex items-center gap-2 font-bold text-foreground">
-          <ShieldCheck className="h-6 w-6 text-primary" />
-          <span>منصة الشكاوى البلدية</span>
-        </Link>
-        <nav className="flex items-center gap-2">
-          <Button asChild variant="ghost"><Link to="/feed">الشكاوى العامة</Link></Button>
-          <Button asChild><Link to="/login">دخول</Link></Button>
-        </nav>
-      </div>
-    </header>
-  );
-}
 
 // helper to avoid unused import warning during build dev redirects
 void redirect;
