@@ -18,7 +18,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <PublicHeader />
       <main>
         <section className="border-b bg-gradient-to-b from-accent/40 to-background">
           <div className="container mx-auto max-w-6xl px-6 py-20 text-center">
