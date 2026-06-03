@@ -56,15 +56,7 @@ function FeedPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link to="/" className="flex items-center gap-2 font-bold"><ShieldCheck className="h-6 w-6 text-primary" /> منصة الشكاوى البلدية</Link>
-          <div className="flex gap-2">
-            <Button asChild variant="outline"><Link to="/login">دخول</Link></Button>
-            <Button asChild><Link to="/login">قدّم شكوى</Link></Button>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       <main className="container mx-auto max-w-6xl px-4 py-6">
         <h1 className="text-2xl font-bold">الشكاوى العامة</h1>
