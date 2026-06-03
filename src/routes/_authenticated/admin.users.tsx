@@ -3,19 +3,15 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { searchUsers, changeUserRole } from "@/lib/users.functions";
+import { listDepartments, setDepartmentAdmin } from "@/lib/departments.functions";
 import { requireAdminRoute } from "@/lib/admin-route-guard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Search, Loader2 } from "lucide-react";
@@ -31,12 +27,21 @@ export const Route = createFileRoute("/_authenticated/admin/users")({
   ),
 });
 
-type Row = { id: string; full_name: string | null; email: string | null; role: "admin" | "citizen" };
+type Row = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: "admin" | "citizen";
+  department_id: string | null;
+  department_name: string | null;
+};
 
 function AdminUsersPage() {
   const qc = useQueryClient();
   const searchFn = useServerFn(searchUsers);
   const changeFn = useServerFn(changeUserRole);
+  const setDeptFn = useServerFn(setDepartmentAdmin);
+  const deptsFn = useServerFn(listDepartments);
 
   const [input, setInput] = useState("");
   const [q, setQ] = useState("");
@@ -47,11 +52,9 @@ function AdminUsersPage() {
     queryKey: ["admin-users", q],
     queryFn: () => searchFn({ data: { q } }) as Promise<Row[]>,
   });
+  const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setQ(input.trim());
-  };
+  const submit = (e: React.FormEvent) => { e.preventDefault(); setQ(input.trim()); };
 
   const confirmChange = async () => {
     if (!pending) return;
@@ -59,13 +62,22 @@ function AdminUsersPage() {
     try {
       const action = pending.role === "admin" ? "demote" : "promote";
       await changeFn({ data: { target_user_id: pending.id, action } });
-      toast.success(action === "promote" ? "تمت ترقية المستخدم إلى مسؤول" : "تم تخفيض المستخدم إلى مواطن");
+      toast.success(action === "promote" ? "تمت ترقية المستخدم إلى مسؤول عام" : "تم تخفيض المستخدم إلى مواطن");
       setPending(null);
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (err: any) {
       toast.error(err?.message ?? "فشل تنفيذ الإجراء");
-    } finally {
-      setBusy(false);
+    } finally { setBusy(false); }
+  };
+
+  const onDeptChange = async (user: Row, value: string) => {
+    try {
+      const deptId = value === "none" ? null : value;
+      await setDeptFn({ data: { target_user_id: user.id, department_id: deptId } });
+      toast.success(deptId ? "تم تعيين مسؤول قسم" : "تم إزالة دور مسؤول القسم");
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل التعيين");
     }
   };
 
@@ -74,24 +86,14 @@ function AdminUsersPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">إدارة المستخدمين</h1>
-          <p className="text-muted-foreground text-sm">البحث وإدارة أدوار المستخدمين</p>
+          <p className="text-muted-foreground text-sm">إدارة المسؤولين العامين ومسؤولي الأقسام</p>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/admin">العودة إلى لوحة الإدارة</Link>
-        </Button>
+        <Button asChild variant="outline"><Link to="/admin">العودة إلى لوحة الإدارة</Link></Button>
       </div>
 
       <form onSubmit={submit} className="flex gap-2 max-w-xl">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="ابحث بالبريد الإلكتروني..."
-          maxLength={200}
-        />
-        <Button type="submit">
-          <Search className="h-4 w-4 ml-2" />
-          بحث
-        </Button>
+        <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="ابحث بالبريد الإلكتروني..." maxLength={200} />
+        <Button type="submit"><Search className="h-4 w-4 ml-2" />بحث</Button>
       </form>
 
       <div className="border rounded-lg overflow-hidden bg-card">
@@ -99,48 +101,53 @@ function AdminUsersPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr className="text-right">
-                <th className="p-3 font-medium">الاسم الكامل</th>
-                <th className="p-3 font-medium">البريد الإلكتروني</th>
+                <th className="p-3 font-medium">الاسم</th>
+                <th className="p-3 font-medium">البريد</th>
                 <th className="p-3 font-medium">الدور</th>
+                <th className="p-3 font-medium">القسم</th>
                 <th className="p-3 font-medium">الإجراء</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin inline ml-2" />
-                    جارٍ التحميل...
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="p-8 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin inline ml-2" />جارٍ التحميل...</td></tr>
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                    لا توجد نتائج
-                  </td>
-                </tr>
-              ) : (
-                rows.map((u) => (
+                <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">لا توجد نتائج</td></tr>
+              ) : rows.map((u) => {
+                const isDeptAdmin = !!u.department_id;
+                const isGeneral = u.role === "admin";
+                return (
                   <tr key={u.id} className="border-t">
                     <td className="p-3">{u.full_name || "—"}</td>
-                    <td className="p-3 ltr-text" dir="ltr">{u.email || "—"}</td>
+                    <td className="p-3" dir="ltr">{u.email || "—"}</td>
                     <td className="p-3">
-                      <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                        {u.role === "admin" ? "مسؤول" : "مواطن"}
+                      <Badge variant={isGeneral ? "default" : isDeptAdmin ? "secondary" : "outline"}>
+                        {isGeneral ? "مسؤول عام" : isDeptAdmin ? "مسؤول قسم" : "مواطن"}
                       </Badge>
                     </td>
                     <td className="p-3">
-                      <Button
-                        size="sm"
-                        variant={u.role === "admin" ? "outline" : "default"}
-                        onClick={() => setPending(u)}
-                      >
-                        {u.role === "admin" ? "تخفيض إلى مواطن" : "ترقية إلى مسؤول"}
+                      {isGeneral ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
+                        <Select value={u.department_id ?? "none"} onValueChange={(v) => onDeptChange(u, v)}>
+                          <SelectTrigger className="w-44"><SelectValue placeholder="—" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">— بدون —</SelectItem>
+                            {(depts as any[]).map((d) => (
+                              <SelectItem key={d.id} value={d.id}>{d.name_ar}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <Button size="sm" variant={isGeneral ? "outline" : "default"} onClick={() => setPending(u)}>
+                        {isGeneral ? "إزالة الإدارة العامة" : "ترقية إلى مسؤول عام"}
                       </Button>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -152,8 +159,8 @@ function AdminUsersPage() {
             <AlertDialogTitle>تأكيد تغيير الدور</AlertDialogTitle>
             <AlertDialogDescription>
               {pending?.role === "admin"
-                ? `هل أنت متأكد من تخفيض ${pending?.email} إلى مواطن؟`
-                : `هل أنت متأكد من ترقية ${pending?.email} إلى مسؤول؟`}
+                ? `هل أنت متأكد من إزالة دور المسؤول العام عن ${pending?.email}؟`
+                : `هل أنت متأكد من ترقية ${pending?.email} إلى مسؤول عام؟`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
