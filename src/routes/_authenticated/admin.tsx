@@ -15,6 +15,7 @@ import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES, STATUSES } fr
 import { Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { RedirectSection, RoutingHistoryList } from "./department";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: ({ location }) => requireAdminRoute(location),
