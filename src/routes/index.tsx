@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ListChecks, FileText, Bell } from "lucide-react";
+import { PublicHeader } from "@/components/PublicHeader";
 
 export const Route = createFileRoute("/")({
   head: () => ({
