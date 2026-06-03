@@ -52,9 +52,62 @@ export type Database = {
           },
         ]
       }
+      complaint_routing_history: {
+        Row: {
+          actor_user_id: string
+          complaint_id: string
+          created_at: string
+          from_department_id: string | null
+          id: string
+          reason: string | null
+          to_department_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          complaint_id: string
+          created_at?: string
+          from_department_id?: string | null
+          id?: string
+          reason?: string | null
+          to_department_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          complaint_id?: string
+          created_at?: string
+          from_department_id?: string | null
+          id?: string
+          reason?: string | null
+          to_department_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_routing_history_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaint_routing_history_from_department_id_fkey"
+            columns: ["from_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaint_routing_history_to_department_id_fkey"
+            columns: ["to_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaints: {
         Row: {
           address: string
+          assigned_department_id: string | null
           category: Database["public"]["Enums"]["complaint_category"]
           created_at: string
           description: string
@@ -67,6 +120,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          assigned_department_id?: string | null
           category: Database["public"]["Enums"]["complaint_category"]
           created_at?: string
           description: string
@@ -79,6 +133,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          assigned_department_id?: string | null
           category?: Database["public"]["Enums"]["complaint_category"]
           created_at?: string
           description?: string
@@ -88,6 +143,64 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaints_assigned_department_id_fkey"
+            columns: ["assigned_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_admins: {
+        Row: {
+          created_at: string
+          department_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_admins_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          created_at: string
+          id: string
+          name_ar: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name_ar: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name_ar?: string
+          slug?: string
         }
         Relationships: []
       }
@@ -212,6 +325,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_department: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -219,6 +333,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_department_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "citizen"

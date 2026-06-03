@@ -31,14 +31,21 @@ export const searchUsers = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
     let roleMap = new Map<string, "admin" | "citizen">();
+    let deptMap = new Map<string, { id: string; name: string }>();
     if (ids.length) {
-      const { data: roles } = await supabaseAdmin
-        .from("user_roles")
-        .select("user_id, role")
-        .in("user_id", ids);
+      const [{ data: roles }, { data: deptRows }] = await Promise.all([
+        supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids),
+        (supabaseAdmin as any)
+          .from("department_admins")
+          .select("user_id, department_id, departments:department_id (name_ar)")
+          .in("user_id", ids),
+      ]);
       for (const r of roles ?? []) {
         const cur = roleMap.get(r.user_id);
         if (r.role === "admin" || !cur) roleMap.set(r.user_id, r.role as any);
+      }
+      for (const d of (deptRows ?? []) as any[]) {
+        deptMap.set(d.user_id, { id: d.department_id, name: d.departments?.name_ar ?? "" });
       }
     }
     return (profiles ?? []).map((p) => ({
@@ -46,6 +53,8 @@ export const searchUsers = createServerFn({ method: "POST" })
       full_name: p.full_name,
       email: p.email,
       role: (roleMap.get(p.id) ?? "citizen") as "admin" | "citizen",
+      department_id: deptMap.get(p.id)?.id ?? null,
+      department_name: deptMap.get(p.id)?.name ?? null,
     }));
   });
 

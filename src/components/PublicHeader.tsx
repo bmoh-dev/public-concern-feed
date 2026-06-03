@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, LayoutDashboard, ListChecks, Plus } from "lucide-react";
+import { ShieldCheck, LayoutDashboard, ListChecks, Plus, Building2 } from "lucide-react";
 import { getMyRole } from "@/lib/notifications.functions";
 
 type AuthState = { ready: boolean; userId: string | null };
@@ -46,6 +46,9 @@ export function PublicHeader() {
               <Button asChild variant="ghost" size="sm"><Link to="/my-complaints"><ListChecks className="ms-1 h-4 w-4" /> شكاواي</Link></Button>
               {role?.isAdmin && (
                 <Button asChild variant="ghost" size="sm"><Link to="/admin"><LayoutDashboard className="ms-1 h-4 w-4" /> الإدارة</Link></Button>
+              )}
+              {role?.isDepartmentAdmin && (
+                <Button asChild variant="ghost" size="sm"><Link to="/department"><Building2 className="ms-1 h-4 w-4" /> القسم</Link></Button>
               )}
             </>
           ) : auth.ready ? (
