@@ -266,6 +266,9 @@ function AdminDetail({ id, row, onClose }: { id: string | null; row: any; onClos
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} />
             </div>
             <Button onClick={save} disabled={saving} className="w-full">{saving ? "جارٍ الحفظ..." : "حفظ"}</Button>
+
+            <RedirectSection complaintId={id!} currentDeptId={row.assigned_department_id ?? null} onDone={() => { qc.invalidateQueries({ queryKey: ["admin-complaints"] }); onClose(); }} />
+            <RoutingHistoryList complaintId={id!} />
           </div>
         )}
       </DialogContent>
