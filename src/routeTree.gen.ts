@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSubmitRouteImport } from './routes/_authenticated/submit'
 import { Route as AuthenticatedMyComplaintsRouteImport } from './routes/_authenticated/my-complaints'
+import { Route as AuthenticatedDepartmentRouteImport } from './routes/_authenticated/department'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 
@@ -48,6 +49,11 @@ const AuthenticatedMyComplaintsRoute =
     path: '/my-complaints',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedDepartmentRoute = AuthenticatedDepartmentRouteImport.update({
+  id: '/department',
+  path: '/department',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/department': typeof AuthenticatedDepartmentRoute
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/department': typeof AuthenticatedDepartmentRoute
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/department': typeof AuthenticatedDepartmentRoute
   '/_authenticated/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/_authenticated/submit': typeof AuthenticatedSubmitRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/login'
     | '/admin'
+    | '/department'
     | '/my-complaints'
     | '/submit'
     | '/admin/users'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/login'
     | '/admin'
+    | '/department'
     | '/my-complaints'
     | '/submit'
     | '/admin/users'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/login'
     | '/_authenticated/admin'
+    | '/_authenticated/department'
     | '/_authenticated/my-complaints'
     | '/_authenticated/submit'
     | '/_authenticated/admin/users'
@@ -170,6 +182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMyComplaintsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/department': {
+      id: '/_authenticated/department'
+      path: '/department'
+      fullPath: '/department'
+      preLoaderRoute: typeof AuthenticatedDepartmentRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -200,12 +219,14 @@ const AuthenticatedAdminRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedDepartmentRoute: typeof AuthenticatedDepartmentRoute
   AuthenticatedMyComplaintsRoute: typeof AuthenticatedMyComplaintsRoute
   AuthenticatedSubmitRoute: typeof AuthenticatedSubmitRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedDepartmentRoute: AuthenticatedDepartmentRoute,
   AuthenticatedMyComplaintsRoute: AuthenticatedMyComplaintsRoute,
   AuthenticatedSubmitRoute: AuthenticatedSubmitRoute,
 }
@@ -223,3 +244,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
