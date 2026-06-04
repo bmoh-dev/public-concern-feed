@@ -147,6 +147,22 @@ function SubmitPage() {
         <div>
           <Label htmlFor="address">العنوان التفصيلي *</Label>
           <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={500} placeholder="الحي، الشارع، علامة مميزة" required />
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowMap((s) => !s)}>
+              <MapPin className="ms-1 h-4 w-4" />
+              {showMap ? "إخفاء الخريطة" : coords ? "تعديل الموقع على الخريطة" : "📍 تحديد على الخريطة (اختياري)"}
+            </Button>
+            {coords && !showMap && (
+              <span className="text-xs text-muted-foreground">
+                تم تحديد موقع: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+              </span>
+            )}
+          </div>
+          {showMap && (
+            <div className="mt-3">
+              <MapPicker value={coords} onChange={setCoords} />
+            </div>
+          )}
         </div>
 
         <div>
