@@ -94,13 +94,28 @@ function SubmitPage() {
           mime_type: it.file.type || "application/octet-stream",
           size_bytes: it.file.size,
         }));
-      await submitFn({
-        data: { title, category: category as any, address, description, attachments },
+      const result = await submitFn({
+        data: {
+          title: title.trim(),
+          category: category as any,
+          address: address.trim(),
+          description: description.trim(),
+          latitude: coords?.lat ?? null,
+          longitude: coords?.lng ?? null,
+          attachments,
+        },
       });
+      console.log("[submitComplaint] success", result);
       toast.success("تم استلام شكواك بنجاح");
       navigate({ to: "/my-complaints" });
     } catch (e: any) {
-      toast.error(e.message ?? "تعذّر إرسال الشكوى");
+      console.error("[submitComplaint] failed", e);
+      const msg =
+        e?.message ||
+        e?.error?.message ||
+        (typeof e === "string" ? e : null) ||
+        "تعذّر إرسال الشكوى. حاول مجدداً.";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
