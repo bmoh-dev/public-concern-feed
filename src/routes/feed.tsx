@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listPublicComplaints } from "@/lib/complaints.functions";
@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/i18n";
 import { AttachmentThumb } from "./_authenticated/my-complaints";
-import { ShieldCheck, Search } from "lucide-react";
+import { Search, List, Map as MapIcon } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
+
+const MapViewLazy = lazy(() => import("@/components/MapPicker").then((m) => ({ default: m.MapView })));
 
 export const Route = createFileRoute("/feed")({
   head: () => ({
