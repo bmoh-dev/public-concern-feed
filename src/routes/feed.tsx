@@ -30,6 +30,8 @@ function FeedPage() {
   const [tab, setTab] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [committed, setCommitted] = useState("");
+  const [view, setView] = useState<"list" | "map">("list");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const listFn = useServerFn(listPublicComplaints);
 
   const category = tab === "all" ? null : (tab as any);
