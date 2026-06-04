@@ -39,6 +39,8 @@ function SubmitPage() {
   const [description, setDescription] = useState("");
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return;
