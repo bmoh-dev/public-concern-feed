@@ -14,6 +14,8 @@ export const submitComplaint = createServerFn({ method: "POST" })
       category: CategoryEnum,
       address: z.string().min(3).max(500),
       description: z.string().min(5).max(5000),
+      latitude: z.number().min(-90).max(90).nullable().optional(),
+      longitude: z.number().min(-180).max(180).nullable().optional(),
       attachments: z
         .array(
           z.object({
@@ -43,15 +45,23 @@ export const submitComplaint = createServerFn({ method: "POST" })
         category: data.category,
         address: data.address,
         description: data.description,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
       })
       .select("id")
       .single();
-    if (error || !complaint) throw new Error(error?.message || "Failed to submit");
+    if (error || !complaint) {
+      console.error("[submitComplaint] insert error", error);
+      throw new Error(error?.message || "Failed to submit complaint");
+    }
 
     if (data.attachments?.length) {
       const rows = data.attachments.map((a) => ({ complaint_id: complaint.id, ...a }));
       const { error: aErr } = await supabase.from("attachments").insert(rows);
-      if (aErr) throw new Error(aErr.message);
+      if (aErr) {
+        console.error("[submitComplaint] attachments insert error", aErr);
+        throw new Error(aErr.message);
+      }
     }
     return { id: complaint.id };
   });
@@ -62,7 +72,7 @@ export const listMyComplaints = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("complaints")
-      .select("id, title, category, status, address, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)")
+      .select("id, title, category, status, address, latitude, longitude, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -97,7 +107,7 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     let q = supabaseAdmin
       .from("complaints")
-      .select("id, title, category, status, address, description, created_at, attachments(id, storage_path, file_name, mime_type)")
+      .select("id, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)")
       .order("created_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.category) q = q.eq("category", data.category);

@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listPublicComplaints } from "@/lib/complaints.functions";
@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/i18n";
 import { AttachmentThumb } from "./_authenticated/my-complaints";
-import { ShieldCheck, Search } from "lucide-react";
+import { Search, List, Map as MapIcon } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
+
+const MapViewLazy = lazy(() => import("@/components/MapPicker").then((m) => ({ default: m.MapView })));
 
 export const Route = createFileRoute("/feed")({
   head: () => ({
@@ -28,6 +30,8 @@ function FeedPage() {
   const [tab, setTab] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [committed, setCommitted] = useState("");
+  const [view, setView] = useState<"list" | "map">("list");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const listFn = useServerFn(listPublicComplaints);
 
   const category = tab === "all" ? null : (tab as any);
@@ -70,6 +74,24 @@ function FeedPage() {
             <Search className="absolute top-2.5 right-3 h-4 w-4 text-muted-foreground" />
             <Input className="pr-9" placeholder="ابحث بعنوان الشكوى" value={search} onChange={(e) => setSearch(e.target.value)} />
           </form>
+          <div className="inline-flex rounded-md border bg-card p-1">
+            <Button
+              type="button"
+              variant={view === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("list")}
+            >
+              <List className="ms-1 h-4 w-4" /> قائمة
+            </Button>
+            <Button
+              type="button"
+              variant={view === "map" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("map")}
+            >
+              <MapIcon className="ms-1 h-4 w-4" /> خريطة
+            </Button>
+          </div>
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="mt-4">
@@ -85,6 +107,42 @@ function FeedPage() {
           <div className="mt-8 text-center text-sm text-muted-foreground">جارٍ التحميل...</div>
         ) : items.length === 0 ? (
           <div className="mt-8 rounded-xl border bg-card p-10 text-center text-muted-foreground">لا توجد شكاوى.</div>
+        ) : view === "map" ? (
+          <div className="mt-4">
+            <Suspense fallback={<div className="text-center text-sm text-muted-foreground">جارٍ تحميل الخريطة...</div>}>
+              <MapViewLazy
+                items={items.map((c: any) => ({
+                  id: c.id,
+                  title: c.title,
+                  status: c.status,
+                  latitude: c.latitude ?? null,
+                  longitude: c.longitude ?? null,
+                }))}
+                onSelect={(id) => setSelectedId(id)}
+              />
+            </Suspense>
+            {selectedId && (() => {
+              const c: any = items.find((x: any) => x.id === selectedId);
+              if (!c) return null;
+              return (
+                <article className="mt-4 rounded-xl border bg-card p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <h2 className="font-bold">{c.title}</h2>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={STATUS_BADGE[c.status]}>{STATUS_LABELS[c.status]}</Badge>
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedId(null)}>إغلاق</Button>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <Badge variant="secondary">{CATEGORY_LABELS[c.category]}</Badge>
+                    <span>مواطن • {new Date(c.created_at).toLocaleDateString("ar")}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground"><strong>الموقع:</strong> {c.address}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{c.description}</p>
+                </article>
+              );
+            })()}
+          </div>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {items.map((c: any) => (
@@ -109,8 +167,8 @@ function FeedPage() {
           </div>
         )}
 
-        <div ref={sentinel} className="h-10" />
-        {query.isFetchingNextPage && <div className="text-center text-sm text-muted-foreground">تحميل المزيد...</div>}
+        {view === "list" && <div ref={sentinel} className="h-10" />}
+        {view === "list" && query.isFetchingNextPage && <div className="text-center text-sm text-muted-foreground">تحميل المزيد...</div>}
       </main>
     </div>
   );

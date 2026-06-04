@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { CATEGORY_LABELS, CATEGORIES } from "@/lib/i18n";
 import { toast } from "sonner";
-import { X, Upload } from "lucide-react";
+import { X, Upload, MapPin } from "lucide-react";
+import { MapPicker } from "@/components/MapPicker";
 
 export const Route = createFileRoute("/_authenticated/submit")({
   head: () => ({ meta: [{ title: "شكوى جديدة | منصة الشكاوى" }] }),
@@ -38,6 +39,8 @@ function SubmitPage() {
   const [description, setDescription] = useState("");
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return;
@@ -91,13 +94,28 @@ function SubmitPage() {
           mime_type: it.file.type || "application/octet-stream",
           size_bytes: it.file.size,
         }));
-      await submitFn({
-        data: { title, category: category as any, address, description, attachments },
+      const result = await submitFn({
+        data: {
+          title: title.trim(),
+          category: category as any,
+          address: address.trim(),
+          description: description.trim(),
+          latitude: coords?.lat ?? null,
+          longitude: coords?.lng ?? null,
+          attachments,
+        },
       });
+      console.log("[submitComplaint] success", result);
       toast.success("تم استلام شكواك بنجاح");
       navigate({ to: "/my-complaints" });
     } catch (e: any) {
-      toast.error(e.message ?? "تعذّر إرسال الشكوى");
+      console.error("[submitComplaint] failed", e);
+      const msg =
+        e?.message ||
+        e?.error?.message ||
+        (typeof e === "string" ? e : null) ||
+        "تعذّر إرسال الشكوى. حاول مجدداً.";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -129,6 +147,22 @@ function SubmitPage() {
         <div>
           <Label htmlFor="address">العنوان التفصيلي *</Label>
           <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={500} placeholder="الحي، الشارع، علامة مميزة" required />
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowMap((s) => !s)}>
+              <MapPin className="ms-1 h-4 w-4" />
+              {showMap ? "إخفاء الخريطة" : coords ? "تعديل الموقع على الخريطة" : "📍 تحديد على الخريطة (اختياري)"}
+            </Button>
+            {coords && !showMap && (
+              <span className="text-xs text-muted-foreground">
+                تم تحديد موقع: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+              </span>
+            )}
+          </div>
+          {showMap && (
+            <div className="mt-3">
+              <MapPicker value={coords} onChange={setCoords} />
+            </div>
+          )}
         </div>
 
         <div>

@@ -113,6 +113,8 @@ export type Database = {
           description: string
           id: string
           internal_notes: string | null
+          latitude: number | null
+          longitude: number | null
           status: Database["public"]["Enums"]["complaint_status"]
           title: string
           updated_at: string
@@ -126,6 +128,8 @@ export type Database = {
           description: string
           id?: string
           internal_notes?: string | null
+          latitude?: number | null
+          longitude?: number | null
           status?: Database["public"]["Enums"]["complaint_status"]
           title: string
           updated_at?: string
@@ -139,6 +143,8 @@ export type Database = {
           description?: string
           id?: string
           internal_notes?: string | null
+          latitude?: number | null
+          longitude?: number | null
           status?: Database["public"]["Enums"]["complaint_status"]
           title?: string
           updated_at?: string
