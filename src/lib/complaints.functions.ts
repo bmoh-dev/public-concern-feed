@@ -107,7 +107,7 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     let q = supabaseAdmin
       .from("complaints")
-      .select("id, title, category, status, address, description, created_at, attachments(id, storage_path, file_name, mime_type)")
+      .select("id, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)")
       .order("created_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.category) q = q.eq("category", data.category);
