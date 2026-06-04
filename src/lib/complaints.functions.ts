@@ -72,7 +72,7 @@ export const listMyComplaints = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("complaints")
-      .select("id, title, category, status, address, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)")
+      .select("id, title, category, status, address, latitude, longitude, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
