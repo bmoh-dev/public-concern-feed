@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { CATEGORY_LABELS, CATEGORIES } from "@/lib/i18n";
 import { toast } from "sonner";
-import { X, Upload } from "lucide-react";
+import { X, Upload, MapPin } from "lucide-react";
+import { MapPicker } from "@/components/MapPicker";
 
 export const Route = createFileRoute("/_authenticated/submit")({
   head: () => ({ meta: [{ title: "شكوى جديدة | منصة الشكاوى" }] }),
