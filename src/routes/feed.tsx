@@ -107,6 +107,42 @@ function FeedPage() {
           <div className="mt-8 text-center text-sm text-muted-foreground">جارٍ التحميل...</div>
         ) : items.length === 0 ? (
           <div className="mt-8 rounded-xl border bg-card p-10 text-center text-muted-foreground">لا توجد شكاوى.</div>
+        ) : view === "map" ? (
+          <div className="mt-4">
+            <Suspense fallback={<div className="text-center text-sm text-muted-foreground">جارٍ تحميل الخريطة...</div>}>
+              <MapViewLazy
+                items={items.map((c: any) => ({
+                  id: c.id,
+                  title: c.title,
+                  status: c.status,
+                  latitude: c.latitude ?? null,
+                  longitude: c.longitude ?? null,
+                }))}
+                onSelect={(id) => setSelectedId(id)}
+              />
+            </Suspense>
+            {selectedId && (() => {
+              const c: any = items.find((x: any) => x.id === selectedId);
+              if (!c) return null;
+              return (
+                <article className="mt-4 rounded-xl border bg-card p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <h2 className="font-bold">{c.title}</h2>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={STATUS_BADGE[c.status]}>{STATUS_LABELS[c.status]}</Badge>
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedId(null)}>إغلاق</Button>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <Badge variant="secondary">{CATEGORY_LABELS[c.category]}</Badge>
+                    <span>مواطن • {new Date(c.created_at).toLocaleDateString("ar")}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground"><strong>الموقع:</strong> {c.address}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{c.description}</p>
+                </article>
+              );
+            })()}
+          </div>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {items.map((c: any) => (
@@ -131,8 +167,8 @@ function FeedPage() {
           </div>
         )}
 
-        <div ref={sentinel} className="h-10" />
-        {query.isFetchingNextPage && <div className="text-center text-sm text-muted-foreground">تحميل المزيد...</div>}
+        {view === "list" && <div ref={sentinel} className="h-10" />}
+        {view === "list" && query.isFetchingNextPage && <div className="text-center text-sm text-muted-foreground">تحميل المزيد...</div>}
       </main>
     </div>
   );
