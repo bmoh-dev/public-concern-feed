@@ -74,6 +74,24 @@ function FeedPage() {
             <Search className="absolute top-2.5 right-3 h-4 w-4 text-muted-foreground" />
             <Input className="pr-9" placeholder="ابحث بعنوان الشكوى" value={search} onChange={(e) => setSearch(e.target.value)} />
           </form>
+          <div className="inline-flex rounded-md border bg-card p-1">
+            <Button
+              type="button"
+              variant={view === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("list")}
+            >
+              <List className="ms-1 h-4 w-4" /> قائمة
+            </Button>
+            <Button
+              type="button"
+              variant={view === "map" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("map")}
+            >
+              <MapIcon className="ms-1 h-4 w-4" /> خريطة
+            </Button>
+          </div>
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="mt-4">
