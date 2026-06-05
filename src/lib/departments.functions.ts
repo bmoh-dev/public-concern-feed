@@ -71,7 +71,7 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
     if (!deptId) throw new Error("Forbidden: department admin only");
     let q = admin
       .from("complaints")
-      .select("id, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id")
+      .select("id, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, attachments(id, storage_path, file_name, mime_type)")
       .eq("assigned_department_id", deptId)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);

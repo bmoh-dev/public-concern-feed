@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminListComplaints, adminMetrics, adminUpdate } from "@/lib/complaints.functions";
 import { requireAdminRoute } from "@/lib/admin-route-guard";
+import { AttachmentGallery } from "@/components/AttachmentGallery";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -252,6 +253,7 @@ function AdminDetail({ id, row, onClose }: { id: string | null; row: any; onClos
             <p><strong>الفئة:</strong> {CATEGORY_LABELS[row.category]}</p>
             <p><strong>العنوان:</strong> {row.address}</p>
             <p className="whitespace-pre-wrap"><strong>الوصف:</strong> {row.description}</p>
+            <AttachmentGallery attachments={row.attachments} />
 
             <div>
               <label className="text-sm font-medium">الحالة</label>

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRole } from "@/lib/notifications.functions";
+import { AttachmentGallery } from "@/components/AttachmentGallery";
 import {
   listDepartmentComplaints,
   departmentUpdateComplaint,
@@ -161,6 +162,7 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
             <p><strong>الفئة:</strong> {CATEGORY_LABELS[row.category]}</p>
             <p><strong>العنوان:</strong> {row.address}</p>
             <p className="whitespace-pre-wrap"><strong>الوصف:</strong> {row.description}</p>
+            <AttachmentGallery attachments={row.attachments} />
 
             <div>
               <label className="text-sm font-medium">الحالة</label>
