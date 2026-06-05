@@ -144,7 +144,7 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     let q = supabaseAdmin
       .from("complaints")
-      .select("id, title, category, status, address, description, internal_notes, created_at, user_id")
+      .select("id, title, category, status, address, description, internal_notes, created_at, user_id, attachments(id, storage_path, file_name, mime_type)")
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
     if (data.category) q = q.eq("category", data.category);

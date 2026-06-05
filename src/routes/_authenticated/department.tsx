@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRole } from "@/lib/notifications.functions";
+import { AttachmentGallery } from "@/components/AttachmentGallery";
 import {
   listDepartmentComplaints,
   departmentUpdateComplaint,
