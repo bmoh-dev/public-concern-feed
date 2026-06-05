@@ -162,6 +162,7 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
             <p><strong>الفئة:</strong> {CATEGORY_LABELS[row.category]}</p>
             <p><strong>العنوان:</strong> {row.address}</p>
             <p className="whitespace-pre-wrap"><strong>الوصف:</strong> {row.description}</p>
+            <AttachmentGallery attachments={row.attachments} />
 
             <div>
               <label className="text-sm font-medium">الحالة</label>
