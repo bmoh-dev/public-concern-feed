@@ -7,10 +7,11 @@ import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (search) => ({
-    redirect: typeof search.redirect === "string" && search.redirect.startsWith("/")
-      ? search.redirect
-      : "/my-complaints",
+  validateSearch: (search): { redirect?: string } => ({
+    redirect:
+      typeof search.redirect === "string" && search.redirect.startsWith("/")
+        ? search.redirect
+        : undefined,
   }),
   head: () => ({ meta: [{ title: "تسجيل الدخول | منصة الشكاوى" }] }),
   component: LoginPage,
