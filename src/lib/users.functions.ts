@@ -30,8 +30,8 @@ export const searchUsers = createServerFn({ method: "POST" })
     const { data: profiles, error } = await query;
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
-    let roleMap = new Map<string, "admin" | "citizen">();
-    let deptMap = new Map<string, { id: string; name: string }>();
+    const roleMap = new Map<string, "admin" | "citizen">();
+    const deptMap = new Map<string, { id: string; name: string }>();
     if (ids.length) {
       const [{ data: roles }, { data: deptRows }] = await Promise.all([
         supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids),
@@ -61,10 +61,12 @@ export const searchUsers = createServerFn({ method: "POST" })
 export const changeUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      target_user_id: z.string().uuid(),
-      action: z.enum(["promote", "demote"]),
-    }).parse(input),
+    z
+      .object({
+        target_user_id: z.string().uuid(),
+        action: z.enum(["promote", "demote"]),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);

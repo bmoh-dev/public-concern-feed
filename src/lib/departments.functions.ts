@@ -61,21 +61,28 @@ export const getMyDepartment = createServerFn({ method: "GET" })
 export const listDepartmentComplaints = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      search: z.string().max(200).nullable().optional(),
-      status: z.enum(["pending", "in_progress", "resolved"]).nullable().optional(),
-    }).parse(input),
+    z
+      .object({
+        search: z.string().max(200).nullable().optional(),
+        status: z.enum(["pending", "in_progress", "resolved"]).nullable().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const deptId = await getMyDepartmentId(context.userId);
     if (!deptId) throw new Error("Forbidden: department admin only");
     let q = admin
       .from("complaints")
-      .select("id, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, attachments(id, storage_path, file_name, mime_type)")
+      .select(
+        "id, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, attachments(id, storage_path, file_name, mime_type)",
+      )
       .eq("assigned_department_id", deptId)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
-    if (data.search) q = q.or(`title.ilike.%${data.search}%,description.ilike.%${data.search}%,id.eq.${/^[0-9a-f-]{36}$/i.test(data.search) ? data.search : "00000000-0000-0000-0000-000000000000"}`);
+    if (data.search)
+      q = q.or(
+        `title.ilike.%${data.search}%,description.ilike.%${data.search}%,id.eq.${/^[0-9a-f-]{36}$/i.test(data.search) ? data.search : "00000000-0000-0000-0000-000000000000"}`,
+      );
     const { data: rows, error } = await q.limit(500);
     if (error) throw new Error(error.message);
     return rows ?? [];
@@ -84,11 +91,13 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
 export const departmentUpdateComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      id: z.string().uuid(),
-      status: z.enum(["pending", "in_progress", "resolved"]).optional(),
-      internal_notes: z.string().max(5000).optional(),
-    }).parse(input),
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["pending", "in_progress", "resolved"]).optional(),
+        internal_notes: z.string().max(5000).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const deptId = await getMyDepartmentId(context.userId);
@@ -101,7 +110,8 @@ export const departmentUpdateComplaint = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .maybeSingle();
     if (!c) throw new Error("Not found");
-    if (!general && c.assigned_department_id !== deptId) throw new Error("Forbidden: not in your department");
+    if (!general && c.assigned_department_id !== deptId)
+      throw new Error("Forbidden: not in your department");
     const patch: any = {};
     if (data.status) patch.status = data.status;
     if (data.internal_notes !== undefined) patch.internal_notes = data.internal_notes;
@@ -114,11 +124,13 @@ export const departmentUpdateComplaint = createServerFn({ method: "POST" })
 export const redirectComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      complaint_id: z.string().uuid(),
-      to_department_id: z.string().uuid(),
-      reason: z.string().max(2000).optional(),
-    }).parse(input),
+    z
+      .object({
+        complaint_id: z.string().uuid(),
+        to_department_id: z.string().uuid(),
+        reason: z.string().max(2000).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const actorId = context.userId;
@@ -208,17 +220,25 @@ export const listRoutingHistory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Resolve department names + actor names
-    const deptIds = Array.from(new Set(rows?.flatMap((r: any) => [r.from_department_id, r.to_department_id]).filter(Boolean) ?? []));
+    const deptIds = Array.from(
+      new Set(
+        rows?.flatMap((r: any) => [r.from_department_id, r.to_department_id]).filter(Boolean) ?? [],
+      ),
+    );
     const actorIds = Array.from(new Set(rows?.map((r: any) => r.actor_user_id) ?? []));
     const [{ data: depts }, { data: profs }] = await Promise.all([
-      deptIds.length ? admin.from("departments").select("id, name_ar").in("id", deptIds) : Promise.resolve({ data: [] }),
-      actorIds.length ? admin.from("profiles").select("id, full_name, email").in("id", actorIds) : Promise.resolve({ data: [] }),
+      deptIds.length
+        ? admin.from("departments").select("id, name_ar").in("id", deptIds)
+        : Promise.resolve({ data: [] }),
+      actorIds.length
+        ? admin.from("profiles").select("id, full_name, email").in("id", actorIds)
+        : Promise.resolve({ data: [] }),
     ]);
     const dMap = new Map((depts ?? []).map((d: any) => [d.id, d.name_ar]));
     const pMap = new Map((profs ?? []).map((p: any) => [p.id, p.full_name || p.email || "—"]));
     return (rows ?? []).map((r: any) => ({
       ...r,
-      from_department_name: r.from_department_id ? dMap.get(r.from_department_id) ?? "—" : null,
+      from_department_name: r.from_department_id ? (dMap.get(r.from_department_id) ?? "—") : null,
       to_department_name: dMap.get(r.to_department_id) ?? "—",
       actor_name: pMap.get(r.actor_user_id) ?? "—",
     }));
@@ -228,19 +248,28 @@ export const listRoutingHistory = createServerFn({ method: "POST" })
 export const setDepartmentAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      target_user_id: z.string().uuid(),
-      department_id: z.string().uuid().nullable(), // null = remove
-    }).parse(input),
+    z
+      .object({
+        target_user_id: z.string().uuid(),
+        department_id: z.string().uuid().nullable(), // null = remove
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertGeneralAdmin(context.userId);
     if (data.department_id === null) {
-      const { error } = await admin.from("department_admins").delete().eq("user_id", data.target_user_id);
+      const { error } = await admin
+        .from("department_admins")
+        .delete()
+        .eq("user_id", data.target_user_id);
       if (error) throw new Error(error.message);
       return { ok: true, role: "citizen" as const };
     }
-    const { data: dept } = await admin.from("departments").select("id").eq("id", data.department_id).maybeSingle();
+    const { data: dept } = await admin
+      .from("departments")
+      .select("id")
+      .eq("id", data.department_id)
+      .maybeSingle();
     if (!dept) throw new Error("Department not found");
 
     // Cannot be both general admin and department admin
@@ -248,7 +277,10 @@ export const setDepartmentAdmin = createServerFn({ method: "POST" })
     if (general) throw new Error("لا يمكن تعيين مسؤول عام كمسؤول قسم");
 
     // Upsert
-    const { error: dErr } = await admin.from("department_admins").delete().eq("user_id", data.target_user_id);
+    const { error: dErr } = await admin
+      .from("department_admins")
+      .delete()
+      .eq("user_id", data.target_user_id);
     if (dErr) throw new Error(dErr.message);
     const { error } = await admin.from("department_admins").insert({
       user_id: data.target_user_id,

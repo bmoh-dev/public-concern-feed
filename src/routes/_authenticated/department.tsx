@@ -15,7 +15,13 @@ import {
   listRoutingHistory,
 } from "@/lib/departments.functions";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,13 +83,24 @@ function DepartmentPage() {
       <div className="mt-6 grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-3">
         <div className="relative md:col-span-2">
           <Search className="absolute top-2.5 right-3 h-4 w-4 text-muted-foreground" />
-          <Input className="pr-9" placeholder="ابحث بالعنوان أو الوصف أو رقم الشكوى" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            className="pr-9"
+            placeholder="ابحث بالعنوان أو الوصف أو رقم الشكوى"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger><SelectValue placeholder="الحالة" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="الحالة" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">كل الحالات</SelectItem>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
+            {STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -102,26 +119,52 @@ function DepartmentPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">جارٍ التحميل...</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">لا توجد شكاوى في قسمك.</td></tr>
-            ) : rows.map((r: any) => (
-              <tr key={r.id} className="border-t hover:bg-muted/30">
-                <td className="p-3 text-xs">{r.id.slice(0, 8)}…</td>
-                <td className="p-3">
-                  <button onClick={() => setOpenId(r.id)} className="font-medium hover:underline">{r.title}</button>
+              <tr>
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                  جارٍ التحميل...
                 </td>
-                <td className="p-3"><Badge variant="secondary">{CATEGORY_LABELS[r.category]}</Badge></td>
-                <td className="p-3"><Badge variant="outline" className={STATUS_BADGE[r.status]}>{STATUS_LABELS[r.status]}</Badge></td>
-                <td className="p-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString("ar")}</td>
-                <td className="p-3 text-xs text-muted-foreground line-clamp-1 max-w-xs">{r.internal_notes ?? "—"}</td>
               </tr>
-            ))}
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                  لا توجد شكاوى في قسمك.
+                </td>
+              </tr>
+            ) : (
+              rows.map((r: any) => (
+                <tr key={r.id} className="border-t hover:bg-muted/30">
+                  <td className="p-3 text-xs">{r.id.slice(0, 8)}…</td>
+                  <td className="p-3">
+                    <button onClick={() => setOpenId(r.id)} className="font-medium hover:underline">
+                      {r.title}
+                    </button>
+                  </td>
+                  <td className="p-3">
+                    <Badge variant="secondary">{CATEGORY_LABELS[r.category]}</Badge>
+                  </td>
+                  <td className="p-3">
+                    <Badge variant="outline" className={STATUS_BADGE[r.status]}>
+                      {STATUS_LABELS[r.status]}
+                    </Badge>
+                  </td>
+                  <td className="p-3 text-muted-foreground">
+                    {new Date(r.created_at).toLocaleDateString("ar")}
+                  </td>
+                  <td className="p-3 text-xs text-muted-foreground line-clamp-1 max-w-xs">
+                    {r.internal_notes ?? "—"}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      <DeptDetail id={openId} row={rows.find((r: any) => r.id === openId)} onClose={() => setOpenId(null)} />
+      <DeptDetail
+        id={openId}
+        row={rows.find((r: any) => r.id === openId)}
+        onClose={() => setOpenId(null)}
+      />
     </div>
   );
 }
@@ -134,7 +177,10 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
   const [saving, setSaving] = useState(false);
 
   useMemo(() => {
-    if (row) { setStatus(row.status); setNotes(row.internal_notes ?? ""); }
+    if (row) {
+      setStatus(row.status);
+      setNotes(row.internal_notes ?? "");
+    }
   }, [row]);
 
   const save = async () => {
@@ -155,21 +201,35 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
   return (
     <Dialog open={!!id} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>تفاصيل الشكوى</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>تفاصيل الشكوى</DialogTitle>
+        </DialogHeader>
         {row && (
           <div className="space-y-3">
             <h3 className="text-lg font-bold">{row.title}</h3>
-            <p><strong>الفئة:</strong> {CATEGORY_LABELS[row.category]}</p>
-            <p><strong>العنوان:</strong> {row.address}</p>
-            <p className="whitespace-pre-wrap"><strong>الوصف:</strong> {row.description}</p>
+            <p>
+              <strong>الفئة:</strong> {CATEGORY_LABELS[row.category]}
+            </p>
+            <p>
+              <strong>العنوان:</strong> {row.address}
+            </p>
+            <p className="whitespace-pre-wrap">
+              <strong>الوصف:</strong> {row.description}
+            </p>
             <AttachmentGallery attachments={row.attachments} />
 
             <div>
               <label className="text-sm font-medium">الحالة</label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {STATUS_LABELS[s]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -177,9 +237,18 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
               <label className="text-sm font-medium">ملاحظات داخلية</label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
             </div>
-            <Button onClick={save} disabled={saving} className="w-full">{saving ? "جارٍ الحفظ..." : "حفظ"}</Button>
+            <Button onClick={save} disabled={saving} className="w-full">
+              {saving ? "جارٍ الحفظ..." : "حفظ"}
+            </Button>
 
-            <RedirectSection complaintId={id!} currentDeptId={row.assigned_department_id} onDone={() => { qc.invalidateQueries({ queryKey: ["dept-complaints"] }); onClose(); }} />
+            <RedirectSection
+              complaintId={id!}
+              currentDeptId={row.assigned_department_id}
+              onDone={() => {
+                qc.invalidateQueries({ queryKey: ["dept-complaints"] });
+                onClose();
+              }}
+            />
             <RoutingHistoryList complaintId={id!} />
           </div>
         )}
@@ -188,21 +257,38 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
   );
 }
 
-export function RedirectSection({ complaintId, currentDeptId, onDone }: { complaintId: string; currentDeptId: string | null; onDone: () => void }) {
+export function RedirectSection({
+  complaintId,
+  currentDeptId,
+  onDone,
+}: {
+  complaintId: string;
+  currentDeptId: string | null;
+  onDone: () => void;
+}) {
   const listDeptsFn = useServerFn(listDepartments);
   const redirectFn = useServerFn(redirectComplaint);
-  const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: () => listDeptsFn() });
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: () => listDeptsFn(),
+  });
   const [target, setTarget] = useState<string>("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
-    if (!target) { toast.error("اختر القسم المستهدف"); return; }
+    if (!target) {
+      toast.error("اختر القسم المستهدف");
+      return;
+    }
     setBusy(true);
     try {
-      await redirectFn({ data: { complaint_id: complaintId, to_department_id: target, reason: reason || undefined } });
+      await redirectFn({
+        data: { complaint_id: complaintId, to_department_id: target, reason: reason || undefined },
+      });
       toast.success("تمت إحالة الشكوى");
-      setTarget(""); setReason("");
+      setTarget("");
+      setReason("");
       onDone();
     } catch (e: any) {
       toast.error(e.message);
@@ -215,22 +301,38 @@ export function RedirectSection({ complaintId, currentDeptId, onDone }: { compla
     <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
       <div className="font-semibold text-sm">إحالة الشكوى</div>
       <Select value={target} onValueChange={setTarget}>
-        <SelectTrigger><SelectValue placeholder="اختر القسم المستهدف" /></SelectTrigger>
+        <SelectTrigger>
+          <SelectValue placeholder="اختر القسم المستهدف" />
+        </SelectTrigger>
         <SelectContent>
-          {(depts as any[]).filter((d) => d.id !== currentDeptId).map((d: any) => (
-            <SelectItem key={d.id} value={d.id}>{d.name_ar}</SelectItem>
-          ))}
+          {(depts as any[])
+            .filter((d) => d.id !== currentDeptId)
+            .map((d: any) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name_ar}
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
-      <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="سبب الإحالة (اختياري)" rows={2} />
-      <Button onClick={submit} disabled={busy || !target} variant="secondary" className="w-full">{busy ? "جارٍ الإحالة..." : "إحالة"}</Button>
+      <Textarea
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="سبب الإحالة (اختياري)"
+        rows={2}
+      />
+      <Button onClick={submit} disabled={busy || !target} variant="secondary" className="w-full">
+        {busy ? "جارٍ الإحالة..." : "إحالة"}
+      </Button>
     </div>
   );
 }
 
 export function RoutingHistoryList({ complaintId }: { complaintId: string }) {
   const fn = useServerFn(listRoutingHistory);
-  const { data = [] } = useQuery({ queryKey: ["routing-history", complaintId], queryFn: () => fn({ data: { complaint_id: complaintId } }) });
+  const { data = [] } = useQuery({
+    queryKey: ["routing-history", complaintId],
+    queryFn: () => fn({ data: { complaint_id: complaintId } }),
+  });
   if (!data.length) return null;
   return (
     <div className="rounded-lg border bg-muted/20 p-3">
@@ -238,8 +340,12 @@ export function RoutingHistoryList({ complaintId }: { complaintId: string }) {
       <ul className="space-y-1 text-xs">
         {(data as any[]).map((h) => (
           <li key={h.id} className="border-r-2 border-primary/40 pr-2">
-            <div>{h.from_department_name ?? "—"} → <strong>{h.to_department_name}</strong></div>
-            <div className="text-muted-foreground">بواسطة {h.actor_name} • {new Date(h.created_at).toLocaleString("ar")}</div>
+            <div>
+              {h.from_department_name ?? "—"} → <strong>{h.to_department_name}</strong>
+            </div>
+            <div className="text-muted-foreground">
+              بواسطة {h.actor_name} • {new Date(h.created_at).toLocaleString("ar")}
+            </div>
             {h.reason && <div className="italic">{h.reason}</div>}
           </li>
         ))}

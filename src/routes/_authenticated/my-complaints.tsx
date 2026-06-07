@@ -4,7 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listMyComplaints, getMyComplaint } from "@/lib/complaints.functions";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES, STATUSES } from "@/lib/i18n";
@@ -19,7 +25,10 @@ export const Route = createFileRoute("/_authenticated/my-complaints")({
 
 function MyComplaintsPage() {
   const listFn = useServerFn(listMyComplaints);
-  const { data = [], isLoading } = useQuery({ queryKey: ["my-complaints"], queryFn: () => listFn() });
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["my-complaints"],
+    queryFn: () => listFn(),
+  });
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -51,20 +60,37 @@ function MyComplaintsPage() {
       <div className="mt-4 grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-5">
         <div className="relative md:col-span-2">
           <Search className="absolute top-2.5 right-3 h-4 w-4 text-muted-foreground" />
-          <Input className="pr-9" placeholder="ابحث بالعنوان" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            className="pr-9"
+            placeholder="ابحث بالعنوان"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger><SelectValue placeholder="الحالة" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="الحالة" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">كل الحالات</SelectItem>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
+            {STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger><SelectValue placeholder="الفئة" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="الفئة" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">كل الفئات</SelectItem>
-            {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>)}
+            {CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {CATEGORY_LABELS[c]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <div className="flex items-center gap-2">
@@ -90,7 +116,9 @@ function MyComplaintsPage() {
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="line-clamp-1 font-semibold">{c.title}</h3>
-                <Badge variant="outline" className={STATUS_BADGE[c.status]}>{STATUS_LABELS[c.status]}</Badge>
+                <Badge variant="outline" className={STATUS_BADGE[c.status]}>
+                  {STATUS_LABELS[c.status]}
+                </Badge>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Badge variant="secondary">{CATEGORY_LABELS[c.category]}</Badge>
@@ -126,11 +154,15 @@ function ComplaintDetailDialog({ id, onClose }: { id: string | null; onClose: ()
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">{data.title}</h2>
-              <Badge variant="outline" className={STATUS_BADGE[data.status]}>{STATUS_LABELS[data.status]}</Badge>
+              <Badge variant="outline" className={STATUS_BADGE[data.status]}>
+                {STATUS_LABELS[data.status]}
+              </Badge>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
               <Badge variant="secondary">{CATEGORY_LABELS[data.category]}</Badge>
-              <span className="text-muted-foreground">{new Date(data.created_at).toLocaleString("ar")}</span>
+              <span className="text-muted-foreground">
+                {new Date(data.created_at).toLocaleString("ar")}
+              </span>
             </div>
             <Section title="العنوان">{data.address}</Section>
             <Section title="الوصف">{data.description}</Section>
@@ -138,7 +170,9 @@ function ComplaintDetailDialog({ id, onClose }: { id: string | null; onClose: ()
               <div>
                 <h4 className="mb-2 text-sm font-semibold">المرفقات</h4>
                 <div className="grid grid-cols-3 gap-2">
-                  {data.attachments.map((a: any) => <AttachmentThumb key={a.id} a={a} />)}
+                  {data.attachments.map((a: any) => (
+                    <AttachmentThumb key={a.id} a={a} />
+                  ))}
                 </div>
               </div>
             )}
@@ -158,12 +192,22 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function AttachmentThumb({ a }: { a: { storage_path: string; mime_type: string; file_name: string } }) {
-  const url = supabase.storage.from("complaint-attachments").getPublicUrl(a.storage_path).data.publicUrl;
+export function AttachmentThumb({
+  a,
+}: {
+  a: { storage_path: string; mime_type: string; file_name: string };
+}) {
+  const url = supabase.storage.from("complaint-attachments").getPublicUrl(a.storage_path)
+    .data.publicUrl;
   const isImage = a.mime_type.startsWith("image/");
   const isVideo = a.mime_type.startsWith("video/");
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded border bg-muted">
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="block overflow-hidden rounded border bg-muted"
+    >
       {isImage ? (
         <img src={url} alt={a.file_name} className="h-24 w-full object-cover" />
       ) : isVideo ? (
