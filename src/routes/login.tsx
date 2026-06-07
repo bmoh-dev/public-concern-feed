@@ -22,10 +22,12 @@ function LoginPage() {
   const { redirect } = Route.useSearch();
   const [loading, setLoading] = useState(false);
 
+  const target = redirect ?? "/my-complaints";
+
   useEffect(() => {
     const redirectAfterAuth = () => {
       supabase.auth.getUser().then(({ data, error }) => {
-        if (!error && data.user) navigate({ to: redirect as any, replace: true });
+        if (!error && data.user) navigate({ to: target as any, replace: true });
       });
     };
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -33,12 +35,12 @@ function LoginPage() {
     });
     redirectAfterAuth();
     return () => sub.subscription.unsubscribe();
-  }, [navigate, redirect]);
+  }, [navigate, target]);
 
   const signIn = async () => {
     setLoading(true);
     const callbackUrl = new URL("/login", window.location.origin);
-    callbackUrl.searchParams.set("redirect", redirect);
+    callbackUrl.searchParams.set("redirect", target);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: callbackUrl.toString(),
     });
