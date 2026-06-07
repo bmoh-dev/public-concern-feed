@@ -79,7 +79,8 @@ function AdminPage() {
   };
   const toggleOne = (id: string, checked: boolean) => {
     const next = new Set(selected);
-    checked ? next.add(id) : next.delete(id);
+    if (checked) next.add(id);
+    else next.delete(id);
     setSelected(next);
   };
 
