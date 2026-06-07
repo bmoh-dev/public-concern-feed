@@ -32,9 +32,8 @@ export function AttachmentGallery({
 }
 
 function MediaCard({ attachment }: { attachment: AttachmentItem }) {
-  const url = supabase.storage
-    .from("complaint-attachments")
-    .getPublicUrl(attachment.storage_path).data.publicUrl;
+  const url = supabase.storage.from("complaint-attachments").getPublicUrl(attachment.storage_path)
+    .data.publicUrl;
   const isImage = attachment.mime_type.startsWith("image/");
   const isVideo = attachment.mime_type.startsWith("video/");
   const [lightbox, setLightbox] = useState(false);
@@ -48,11 +47,7 @@ function MediaCard({ attachment }: { attachment: AttachmentItem }) {
           className="relative block overflow-hidden rounded-lg border bg-muted hover:opacity-90 transition"
         >
           <div className="aspect-[4/3]">
-            <img
-              src={url}
-              alt={attachment.file_name}
-              className="h-full w-full object-cover"
-            />
+            <img src={url} alt={attachment.file_name} className="h-full w-full object-cover" />
           </div>
         </button>
         {lightbox && (

@@ -111,8 +111,14 @@ export function MapPicker({
           </span>
         )}
       </div>
-      <div ref={containerRef} style={{ height }} className="w-full overflow-hidden rounded-lg border" />
-      <p className="text-xs text-muted-foreground">انقر على الخريطة لوضع علامة، أو اسحبها لتعديل الموقع.</p>
+      <div
+        ref={containerRef}
+        style={{ height }}
+        className="w-full overflow-hidden rounded-lg border"
+      />
+      <p className="text-xs text-muted-foreground">
+        انقر على الخريطة لوضع علامة، أو اسحبها لتعديل الموقع.
+      </p>
     </div>
   );
 }
@@ -122,7 +128,13 @@ export function MapView({
   onSelect,
   height = 500,
 }: {
-  items: Array<{ id: string; latitude: number | null; longitude: number | null; title: string; status: string }>;
+  items: Array<{
+    id: string;
+    latitude: number | null;
+    longitude: number | null;
+    title: string;
+    status: string;
+  }>;
   onSelect?: (id: string) => void;
   height?: number;
 }) {
@@ -179,7 +191,9 @@ export function MapView({
         `<strong>${escapeHtml(p.title)}</strong><br/><button data-id="${p.id}" class="lvbl-popup-btn" style="margin-top:6px;color:#2563eb;text-decoration:underline">عرض التفاصيل</button>`,
       );
       m.on("popupopen", (e: any) => {
-        const el = (e.popup.getElement() as HTMLElement | null)?.querySelector<HTMLButtonElement>(".lvbl-popup-btn");
+        const el = (e.popup.getElement() as HTMLElement | null)?.querySelector<HTMLButtonElement>(
+          ".lvbl-popup-btn",
+        );
         if (el) el.onclick = () => onSelect?.(p.id);
       });
       return m;
@@ -191,14 +205,23 @@ export function MapView({
 
   return (
     <div>
-      <div ref={containerRef} style={{ height }} className="w-full overflow-hidden rounded-xl border" />
+      <div
+        ref={containerRef}
+        style={{ height }}
+        className="w-full overflow-hidden rounded-xl border"
+      />
       {points.length === 0 && (
-        <p className="mt-2 text-center text-sm text-muted-foreground">لا توجد شكاوى بإحداثيات على الخريطة.</p>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          لا توجد شكاوى بإحداثيات على الخريطة.
+        </p>
       )}
     </div>
   );
 }
 
 function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  return s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }

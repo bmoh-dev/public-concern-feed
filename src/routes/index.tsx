@@ -9,7 +9,10 @@ export const Route = createFileRoute("/")({
       { title: "بلدية - منصة الشكاوى" },
       { name: "description", content: "منصة بلدية لتقديم وتتبع الشكاوى وعرض الشفافية العامة." },
       { property: "og:title", content: "بلدية - منصة الشكاوى" },
-      { property: "og:description", content: "منصة بلدية لتقديم وتتبع الشكاوى وعرض الشفافية العامة." },
+      {
+        property: "og:description",
+        content: "منصة بلدية لتقديم وتتبع الشكاوى وعرض الشفافية العامة.",
+      },
     ],
   }),
   component: HomePage,
@@ -26,7 +29,8 @@ function HomePage() {
               صوتك مسموع — قدّم شكواك بشفافية ومسؤولية
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              منصة رسمية تتيح للمواطنين تقديم الشكاوى البلدية، متابعتها، ومشاهدة شكاوى المدينة بشكل علني.
+              منصة رسمية تتيح للمواطنين تقديم الشكاوى البلدية، متابعتها، ومشاهدة شكاوى المدينة بشكل
+              علني.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">
@@ -42,12 +46,27 @@ function HomePage() {
         <section className="container mx-auto max-w-6xl px-6 py-16">
           <div className="grid gap-6 md:grid-cols-4">
             {[
-              { icon: ShieldCheck, title: "هوية موثّقة", desc: "تسجيل آمن عبر حساب Google لضمان المساءلة." },
-              { icon: FileText, title: "تقديم سريع", desc: "نموذج مبسّط مع إمكانية إرفاق صور وفيديوهات." },
-              { icon: ListChecks, title: "تتبّع مباشر", desc: "تابع حالة شكواك من لوحة تحكّمك الخاصة." },
+              {
+                icon: ShieldCheck,
+                title: "هوية موثّقة",
+                desc: "تسجيل آمن عبر حساب Google لضمان المساءلة.",
+              },
+              {
+                icon: FileText,
+                title: "تقديم سريع",
+                desc: "نموذج مبسّط مع إمكانية إرفاق صور وفيديوهات.",
+              },
+              {
+                icon: ListChecks,
+                title: "تتبّع مباشر",
+                desc: "تابع حالة شكواك من لوحة تحكّمك الخاصة.",
+              },
               { icon: Bell, title: "إشعارات فورية", desc: "تلقَّ إشعارات عند تحديث حالة الشكوى." },
             ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
+              <div
+                key={title}
+                className="rounded-xl border bg-card p-6 text-card-foreground shadow-sm"
+              >
                 <Icon className="h-6 w-6 text-primary" />
                 <h3 className="mt-3 font-semibold">{title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
@@ -62,7 +81,6 @@ function HomePage() {
     </div>
   );
 }
-
 
 // helper to avoid unused import warning during build dev redirects
 void redirect;
