@@ -171,6 +171,28 @@ function SubmitPage() {
 
 
       <form onSubmit={onSubmit} className="mt-6 space-y-5 rounded-xl border bg-card p-6 shadow-sm">
+        {municipalities.length > 1 && (
+          <div>
+            <Label>البلدية *</Label>
+            <Select value={activeMunicipalityId} onValueChange={setSelectedMunicipality}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {municipalities.map((m: any) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name} — {m.wilaya}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {municipalities.length === 1 && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+            البلدية: <strong>{municipalities[0].name}</strong> — {municipalities[0].wilaya}
+          </div>
+        )}
         <div>
           <Label htmlFor="title">عنوان الشكوى *</Label>
           <Input
