@@ -41,6 +41,11 @@ type UploadItem = {
 function SubmitPage() {
   const navigate = useNavigate();
   const submitFn = useServerFn(submitComplaint);
+  const stateFn = useServerFn(getMyOnboardingState);
+  const { data: state, isLoading: stateLoading } = useQuery({
+    queryKey: ["onboarding"],
+    queryFn: () => stateFn(),
+  });
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string>("infrastructure");
   const [address, setAddress] = useState("");
@@ -49,6 +54,7 @@ function SubmitPage() {
   const [submitting, setSubmitting] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [selectedMunicipality, setSelectedMunicipality] = useState<string>("");
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return;
