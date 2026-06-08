@@ -11,6 +11,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
       .object({
+        municipality_id: z.string().uuid(),
         title: z.string().min(3).max(200),
         category: CategoryEnum,
         address: z.string().min(3).max(500),
@@ -43,10 +44,28 @@ export const submitComplaint = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: complaint, error } = await supabase
+    const admin: any = supabaseAdmin;
+
+    // Backend enforcement: verified municipality + membership
+    const { data: m } = await admin
+      .from("municipalities")
+      .select("id, status")
+      .eq("id", data.municipality_id)
+      .maybeSingle();
+    if (!m || m.status !== "verified") throw new Error("بلدية غير موثّقة");
+    const { data: mem } = await admin
+      .from("municipality_members")
+      .select("user_id")
+      .eq("municipality_id", data.municipality_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!mem) throw new Error("لست عضواً في هذه البلدية");
+
+    const { data: complaint, error } = await (supabase as any)
       .from("complaints")
       .insert({
         user_id: userId,
+        municipality_id: data.municipality_id,
         title: data.title,
         category: data.category,
         address: data.address,
@@ -104,11 +123,12 @@ export const getMyComplaint = createServerFn({ method: "POST" })
     return row;
   });
 
-// PUBLIC feed — anon-safe
+// PUBLIC feed — anon-safe, requires a verified municipality_id
 export const listPublicComplaints = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
       .object({
+        municipality_id: z.string().uuid(),
         category: CategoryEnum.nullable().optional(),
         search: z.string().max(200).nullable().optional(),
         limit: z.number().int().min(1).max(50).default(12),
@@ -117,11 +137,20 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    let q = supabaseAdmin
+    // Reject pending/rejected municipalities
+    const { data: m } = await (supabaseAdmin as any)
+      .from("municipalities")
+      .select("status")
+      .eq("id", data.municipality_id)
+      .maybeSingle();
+    if (!m || m.status !== "verified") return [];
+
+    let q = (supabaseAdmin as any)
       .from("complaints")
       .select(
         "id, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)",
       )
+      .eq("municipality_id", data.municipality_id)
       .order("created_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.category) q = q.eq("category", data.category);
@@ -130,6 +159,7 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
 
 // ADMIN
 async function assertAdmin(supabase: any, userId: string) {

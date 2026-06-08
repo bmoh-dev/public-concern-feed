@@ -114,7 +114,9 @@ export type Database = {
           id: string
           internal_notes: string | null
           latitude: number | null
+          legacy_imported: boolean
           longitude: number | null
+          municipality_id: string
           status: Database["public"]["Enums"]["complaint_status"]
           title: string
           updated_at: string
@@ -129,7 +131,9 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           latitude?: number | null
+          legacy_imported?: boolean
           longitude?: number | null
+          municipality_id: string
           status?: Database["public"]["Enums"]["complaint_status"]
           title: string
           updated_at?: string
@@ -144,7 +148,9 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           latitude?: number | null
+          legacy_imported?: boolean
           longitude?: number | null
+          municipality_id?: string
           status?: Database["public"]["Enums"]["complaint_status"]
           title?: string
           updated_at?: string
@@ -156,6 +162,13 @@ export type Database = {
             columns: ["assigned_department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
             referencedColumns: ["id"]
           },
         ]
@@ -193,22 +206,104 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          legacy_imported: boolean
+          municipality_id: string
           name_ar: string
           slug: string
         }
         Insert: {
           created_at?: string
           id?: string
+          legacy_imported?: boolean
+          municipality_id: string
           name_ar: string
           slug: string
         }
         Update: {
           created_at?: string
           id?: string
+          legacy_imported?: boolean
+          municipality_id?: string
           name_ar?: string
           slug?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "departments_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      municipalities: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["municipality_status"]
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          wilaya: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["municipality_status"]
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          wilaya: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["municipality_status"]
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          wilaya?: string
+        }
         Relationships: []
+      }
+      municipality_members: {
+        Row: {
+          joined_at: string
+          municipality_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          joined_at?: string
+          municipality_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          joined_at?: string
+          municipality_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "municipality_members_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -340,15 +435,29 @@ export type Database = {
         Returns: boolean
       }
       is_department_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_global_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_municipality_admin: {
+        Args: { _municipality_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_municipality_member: {
+        Args: { _municipality_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_municipality_super_admin: {
+        Args: { _municipality_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "admin" | "citizen"
+      app_role: "citizen" | "admin" | "super_admin" | "global_admin"
       complaint_category:
         | "infrastructure"
         | "public_lighting"
         | "cleanliness"
         | "other"
       complaint_status: "pending" | "in_progress" | "resolved"
+      municipality_status: "pending" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -476,7 +585,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "citizen"],
+      app_role: ["citizen", "admin", "super_admin", "global_admin"],
       complaint_category: [
         "infrastructure",
         "public_lighting",
@@ -484,6 +593,7 @@ export const Constants = {
         "other",
       ],
       complaint_status: ["pending", "in_progress", "resolved"],
+      municipality_status: ["pending", "verified", "rejected"],
     },
   },
 } as const

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, LayoutDashboard, ListChecks, Plus, Building2 } from "lucide-react";
+import { ShieldCheck, LayoutDashboard, ListChecks, Plus, Building2, Globe } from "lucide-react";
 import { getMyRole } from "@/lib/notifications.functions";
 
 type AuthState = { ready: boolean; userId: string | null };
@@ -68,6 +68,13 @@ export function PublicHeader() {
                 <Button asChild variant="ghost" size="sm">
                   <Link to="/department">
                     <Building2 className="ms-1 h-4 w-4" /> القسم
+                  </Link>
+                </Button>
+              )}
+              {role?.isGlobalAdmin && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/platform-admin">
+                    <Globe className="ms-1 h-4 w-4" /> المنصة
                   </Link>
                 </Button>
               )}
