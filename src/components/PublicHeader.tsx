@@ -71,6 +71,13 @@ export function PublicHeader() {
                   </Link>
                 </Button>
               )}
+              {role?.isGlobalAdmin && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/platform-admin">
+                    <Globe className="ms-1 h-4 w-4" /> المنصة
+                  </Link>
+                </Button>
+              )}
             </>
           ) : auth.ready ? (
             <Button asChild>
