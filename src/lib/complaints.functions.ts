@@ -11,6 +11,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
       .object({
+        municipality_id: z.string().uuid(),
         title: z.string().min(3).max(200),
         category: CategoryEnum,
         address: z.string().min(3).max(500),
@@ -43,10 +44,28 @@ export const submitComplaint = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: complaint, error } = await supabase
+    const admin: any = supabaseAdmin;
+
+    // Backend enforcement: verified municipality + membership
+    const { data: m } = await admin
+      .from("municipalities")
+      .select("id, status")
+      .eq("id", data.municipality_id)
+      .maybeSingle();
+    if (!m || m.status !== "verified") throw new Error("بلدية غير موثّقة");
+    const { data: mem } = await admin
+      .from("municipality_members")
+      .select("user_id")
+      .eq("municipality_id", data.municipality_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!mem) throw new Error("لست عضواً في هذه البلدية");
+
+    const { data: complaint, error } = await (supabase as any)
       .from("complaints")
       .insert({
         user_id: userId,
+        municipality_id: data.municipality_id,
         title: data.title,
         category: data.category,
         address: data.address,
