@@ -111,6 +111,11 @@ function AuthLayout() {
                 </Link>
               </Button>
             )}
+            {role?.isGlobalAdmin && (
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/platform-admin">المنصة</Link>
+              </Button>
+            )}
             <NotificationsMenu />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
