@@ -35,8 +35,10 @@ export const getMyRole = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const admin: any = supabaseAdmin;
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-    const roles = (data ?? []).map((r) => r.role);
+    const roles = (data ?? []).map((r) => r.role) as string[];
     const isAdmin = roles.includes("admin");
+    const isGlobalAdmin = roles.includes("global_admin");
+
     let departmentId: string | null = null;
     let departmentName: string | null = null;
     if (!isAdmin) {
@@ -51,5 +53,29 @@ export const getMyRole = createServerFn({ method: "GET" })
       }
     }
     const isDepartmentAdmin = !!departmentId;
-    return { roles, isAdmin, isDepartmentAdmin, departmentId, departmentName };
+
+    // Municipality memberships (verified only)
+    const { data: mems } = await admin
+      .from("municipality_members")
+      .select("municipality_id, role, municipalities:municipality_id(id,name,wilaya,status)")
+      .eq("user_id", userId);
+    const municipalities = (mems ?? [])
+      .filter((m: any) => m.municipalities?.status === "verified")
+      .map((m: any) => ({
+        id: m.municipality_id,
+        name: m.municipalities.name,
+        wilaya: m.municipalities.wilaya,
+        role: m.role as "citizen" | "admin" | "super_admin",
+      }));
+
+    return {
+      roles,
+      isAdmin,
+      isGlobalAdmin,
+      isDepartmentAdmin,
+      departmentId,
+      departmentName,
+      municipalities,
+    };
   });
+
