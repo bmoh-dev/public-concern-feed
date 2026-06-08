@@ -102,6 +102,32 @@ function FeedPage() {
           للمشاركة والتعليق يجب تسجيل الدخول بحساب Google.
         </p>
 
+        <div className="mt-4 max-w-md">
+          <label className="text-sm font-medium">البلدية</label>
+          <Select
+            value={municipalityId}
+            onValueChange={(v) => navigate({ search: { m: v }, replace: true })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="اختر بلدية للعرض" />
+            </SelectTrigger>
+            <SelectContent>
+              {municipalities.map((m: any) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name} — {m.wilaya}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {!municipalityId && (
+          <div className="mt-6 rounded-xl border bg-card p-6 text-center text-muted-foreground">
+            اختر بلدية لعرض الشكاوى.
+          </div>
+        )}
+
+
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <form
             className="relative flex-1"
