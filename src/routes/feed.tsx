@@ -1,22 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listPublicComplaints } from "@/lib/complaints.functions";
+import { listVerifiedMunicipalities } from "@/lib/municipalities.functions";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/i18n";
 import { AttachmentThumb } from "./_authenticated/my-complaints";
 import { Search, List, Map as MapIcon } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
+import { z } from "zod";
 
 const MapViewLazy = lazy(() =>
   import("@/components/MapPicker").then((m) => ({ default: m.MapView })),
 );
 
 export const Route = createFileRoute("/feed")({
+  validateSearch: (s: Record<string, unknown>) =>
+    z.object({ m: z.string().uuid().optional() }).parse(s),
   head: () => ({
     meta: [
       { title: "الشكاوى العامة | منصة الشكاوى" },
@@ -29,25 +40,43 @@ export const Route = createFileRoute("/feed")({
 const PAGE_SIZE = 12;
 
 function FeedPage() {
+  const { m: searchMunicipality } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [tab, setTab] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [committed, setCommitted] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const listFn = useServerFn(listPublicComplaints);
+  const munFn = useServerFn(listVerifiedMunicipalities);
+
+  const { data: municipalities = [] } = useQuery({
+    queryKey: ["verified-municipalities"],
+    queryFn: () => munFn(),
+  });
+
+  const municipalityId = searchMunicipality || municipalities[0]?.id || "";
 
   const category = tab === "all" ? null : (tab as any);
 
   const query = useInfiniteQuery({
-    queryKey: ["public-complaints", category, committed],
+    queryKey: ["public-complaints", municipalityId, category, committed],
+    enabled: !!municipalityId,
     queryFn: ({ pageParam = 0 }) =>
       listFn({
-        data: { category, search: committed || null, limit: PAGE_SIZE, offset: pageParam },
+        data: {
+          municipality_id: municipalityId,
+          category,
+          search: committed || null,
+          limit: PAGE_SIZE,
+          offset: pageParam,
+        },
       }),
     initialPageParam: 0,
     getNextPageParam: (last, pages) =>
       last.length < PAGE_SIZE ? undefined : pages.length * PAGE_SIZE,
   });
+
 
   const items = query.data?.pages.flat() ?? [];
 
