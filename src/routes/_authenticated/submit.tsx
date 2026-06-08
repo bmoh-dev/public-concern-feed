@@ -92,10 +92,18 @@ function SubmitPage() {
     setUploads((prev) => prev.filter((it) => it.file !== file));
   };
 
+  const municipalities = state?.municipalities ?? [];
+  const activeMunicipalityId =
+    selectedMunicipality || municipalities[0]?.id || "";
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !address.trim() || !description.trim()) {
       toast.error("يرجى تعبئة جميع الحقول");
+      return;
+    }
+    if (!activeMunicipalityId) {
+      toast.error("يجب اختيار بلدية");
       return;
     }
     setSubmitting(true);
@@ -110,6 +118,7 @@ function SubmitPage() {
         }));
       const result = await submitFn({
         data: {
+          municipality_id: activeMunicipalityId,
           title: title.trim(),
           category: category as any,
           address: address.trim(),
@@ -135,12 +144,31 @@ function SubmitPage() {
     }
   };
 
+  if (stateLoading) {
+    return <div className="text-sm text-muted-foreground">جارٍ التحميل...</div>;
+  }
+
+  if (municipalities.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 text-center">
+        <h1 className="text-xl font-bold">لا توجد بلدية مرتبطة بحسابك</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          يجب الانضمام إلى بلدية موثّقة قبل تقديم الشكاوى.
+        </p>
+        <Button asChild className="mt-4">
+          <Link to="/onboarding">اختيار بلدية</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-bold">تقديم شكوى جديدة</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         سيتم استخدام اسم وبريد حساب Google الموثّق تلقائياً.
       </p>
+
 
       <form onSubmit={onSubmit} className="mt-6 space-y-5 rounded-xl border bg-card p-6 shadow-sm">
         <div>
