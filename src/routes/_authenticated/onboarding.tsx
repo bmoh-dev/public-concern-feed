@@ -84,7 +84,7 @@ function OnboardingPage() {
         </p>
       </div>
 
-      {state?.pendingOwned.map((p) => (
+      {state?.pendingOwned.map((p: any) => (
         <div key={p.id} className="rounded-xl border bg-card p-5">
           <div className="flex items-start gap-3">
             {p.status === "pending" ? (
