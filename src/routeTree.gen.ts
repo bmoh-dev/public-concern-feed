@@ -14,6 +14,8 @@ import { Route as FeedRouteImport } from './routes/feed'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSubmitRouteImport } from './routes/_authenticated/submit'
+import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authenticated/platform-admin'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMyComplaintsRouteImport } from './routes/_authenticated/my-complaints'
 import { Route as AuthenticatedDepartmentRouteImport } from './routes/_authenticated/department'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -41,6 +43,17 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedSubmitRoute = AuthenticatedSubmitRouteImport.update({
   id: '/submit',
   path: '/submit',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPlatformAdminRoute =
+  AuthenticatedPlatformAdminRouteImport.update({
+    id: '/platform-admin',
+    path: '/platform-admin',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMyComplaintsRoute =
@@ -72,6 +85,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/department': typeof AuthenticatedDepartmentRoute
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
@@ -82,6 +97,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/department': typeof AuthenticatedDepartmentRoute
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
@@ -94,6 +111,8 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/department': typeof AuthenticatedDepartmentRoute
   '/_authenticated/my-complaints': typeof AuthenticatedMyComplaintsRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/_authenticated/submit': typeof AuthenticatedSubmitRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
 }
@@ -106,6 +125,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/department'
     | '/my-complaints'
+    | '/onboarding'
+    | '/platform-admin'
     | '/submit'
     | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
@@ -116,6 +137,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/department'
     | '/my-complaints'
+    | '/onboarding'
+    | '/platform-admin'
     | '/submit'
     | '/admin/users'
   id:
@@ -127,6 +150,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/department'
     | '/_authenticated/my-complaints'
+    | '/_authenticated/onboarding'
+    | '/_authenticated/platform-admin'
     | '/_authenticated/submit'
     | '/_authenticated/admin/users'
   fileRoutesById: FileRoutesById
@@ -175,6 +200,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSubmitRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/platform-admin': {
+      id: '/_authenticated/platform-admin'
+      path: '/platform-admin'
+      fullPath: '/platform-admin'
+      preLoaderRoute: typeof AuthenticatedPlatformAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/my-complaints': {
       id: '/_authenticated/my-complaints'
       path: '/my-complaints'
@@ -221,6 +260,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDepartmentRoute: typeof AuthenticatedDepartmentRoute
   AuthenticatedMyComplaintsRoute: typeof AuthenticatedMyComplaintsRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedPlatformAdminRoute: typeof AuthenticatedPlatformAdminRoute
   AuthenticatedSubmitRoute: typeof AuthenticatedSubmitRoute
 }
 
@@ -228,6 +269,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDepartmentRoute: AuthenticatedDepartmentRoute,
   AuthenticatedMyComplaintsRoute: AuthenticatedMyComplaintsRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedPlatformAdminRoute: AuthenticatedPlatformAdminRoute,
   AuthenticatedSubmitRoute: AuthenticatedSubmitRoute,
 }
 
@@ -244,3 +287,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
