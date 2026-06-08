@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, LayoutDashboard, ListChecks, Plus, Building2 } from "lucide-react";
+import { ShieldCheck, LayoutDashboard, ListChecks, Plus, Building2, Globe } from "lucide-react";
 import { getMyRole } from "@/lib/notifications.functions";
 
 type AuthState = { ready: boolean; userId: string | null };
