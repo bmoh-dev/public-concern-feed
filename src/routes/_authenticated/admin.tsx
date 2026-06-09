@@ -99,7 +99,7 @@ function AdminPage() {
 
   const exportXlsx = () => {
     const data = (rows as any[]).map((r) => ({
-      "رقم الشكوى": r.id,
+      "رقم الشكوى": r.complaint_number ?? "",
       العنوان: r.title,
       الوصف: r.description,
       الفئة: CATEGORY_LABELS[r.category] ?? r.category,
