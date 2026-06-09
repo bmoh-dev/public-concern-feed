@@ -342,11 +342,14 @@ function AdminDetail({ id, row, onClose }: { id: string | null; row: any; onClos
     <Dialog open={!!id} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>تفاصيل الشكوى</DialogTitle>
+          <DialogTitle>
+            تفاصيل الشكوى {row?.complaint_number ? `— ${row.complaint_number}` : ""}
+          </DialogTitle>
         </DialogHeader>
         {row && (
           <div className="space-y-3">
             <h3 className="text-lg font-bold">{row.title}</h3>
+
             <div className="text-xs text-muted-foreground">
               المُقدِّم: {row.profiles?.full_name} ({row.profiles?.email})
             </div>
