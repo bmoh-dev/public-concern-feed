@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/platform-admin")({
-  head: () => ({ meta: [{ title: "إدارة المنصة" }] }),
+  head: () => ({ meta: [{ title: "إدارة البلديات" }] }),
   beforeLoad: async () => {
     try {
       const role = await getMyRole();
@@ -36,7 +36,7 @@ function PlatformAdminPage() {
     queryKey: ["platform-admin-municipalities"],
     queryFn: () => listFn(),
   });
-  const [filter, setFilter] = useState<"all" | "pending" | "verified" | "rejected">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "verified" | "rejected">("all");
   const [reasonFor, setReasonFor] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
@@ -46,19 +46,20 @@ function PlatformAdminPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">إدارة المنصة — البلديات</h1>
+      <h1 className="text-2xl font-bold">إدارة البلديات</h1>
       <div className="flex gap-2">
-        {(["pending", "verified", "rejected", "all"] as const).map((s) => (
+        {(["all", "pending", "verified", "rejected"] as const).map((s) => (
           <Button
             key={s}
             size="sm"
             variant={filter === s ? "default" : "outline"}
             onClick={() => setFilter(s)}
           >
-            {s === "pending" ? "قيد المراجعة" : s === "verified" ? "موثّقة" : s === "rejected" ? "مرفوضة" : "الكل"}
+            {s === "all" ? "الكل" : s === "pending" ? "قيد المراجعة" : s === "verified" ? "موثّقة" : "مرفوضة"}
           </Button>
         ))}
       </div>
+
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>

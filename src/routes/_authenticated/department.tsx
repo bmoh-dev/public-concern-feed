@@ -133,7 +133,7 @@ function DepartmentPage() {
             ) : (
               rows.map((r: any) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
-                  <td className="p-3 text-xs">{r.id.slice(0, 8)}…</td>
+                  <td className="p-3 text-xs font-mono">{r.complaint_number}</td>
                   <td className="p-3">
                     <button onClick={() => setOpenId(r.id)} className="font-medium hover:underline">
                       {r.title}

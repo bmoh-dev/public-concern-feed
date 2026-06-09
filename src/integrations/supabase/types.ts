@@ -109,6 +109,7 @@ export type Database = {
           address: string
           assigned_department_id: string | null
           category: Database["public"]["Enums"]["complaint_category"]
+          complaint_number: string
           created_at: string
           description: string
           id: string
@@ -126,6 +127,7 @@ export type Database = {
           address: string
           assigned_department_id?: string | null
           category: Database["public"]["Enums"]["complaint_category"]
+          complaint_number: string
           created_at?: string
           description: string
           id?: string
@@ -143,6 +145,7 @@ export type Database = {
           address?: string
           assigned_department_id?: string | null
           category?: Database["public"]["Enums"]["complaint_category"]
+          complaint_number?: string
           created_at?: string
           description?: string
           id?: string

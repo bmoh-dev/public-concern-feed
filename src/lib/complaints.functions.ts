@@ -98,13 +98,14 @@ export const listMyComplaints = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("complaints")
       .select(
-        "id, title, category, status, address, latitude, longitude, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, latitude, longitude, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
 
 export const getMyComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -114,8 +115,9 @@ export const getMyComplaint = createServerFn({ method: "POST" })
     const { data: row, error } = await supabase
       .from("complaints")
       .select(
-        "id, title, category, status, address, description, created_at, updated_at, user_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, created_at, updated_at, user_id, attachments(id, storage_path, file_name, mime_type)",
       )
+
       .eq("id", data.id)
       .single();
     if (error || !row) throw new Error("Not found");
@@ -148,8 +150,9 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
     let q = (supabaseAdmin as any)
       .from("complaints")
       .select(
-        "id, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)",
       )
+
       .eq("municipality_id", data.municipality_id)
       .order("created_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
@@ -190,17 +193,21 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("complaints")
       .select(
-        "id, title, category, status, address, description, internal_notes, created_at, user_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, attachments(id, storage_path, file_name, mime_type)",
       )
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
     if (data.category) q = q.eq("category", data.category);
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
-    if (data.search)
+    if (data.search) {
+      const s = data.search;
+      const uuid = /^[0-9a-f-]{36}$/i.test(s) ? s : "00000000-0000-0000-0000-000000000000";
       q = q.or(
-        `title.ilike.%${data.search}%,description.ilike.%${data.search}%,id.eq.${/^[0-9a-f-]{36}$/i.test(data.search) ? data.search : "00000000-0000-0000-0000-000000000000"}`,
+        `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
       );
+    }
+
     const { data: rows, error } = await q.limit(500);
     if (error) throw new Error(error.message);
     const userIds = Array.from(new Set((rows ?? []).map((r) => r.user_id)));

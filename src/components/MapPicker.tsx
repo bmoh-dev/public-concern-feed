@@ -130,6 +130,7 @@ export function MapView({
 }: {
   items: Array<{
     id: string;
+    complaint_number?: string | null;
     latitude: number | null;
     longitude: number | null;
     title: string;
@@ -142,11 +143,25 @@ export function MapView({
   const mapRef = useRef<any>(null);
   const layerRef = useRef<any>(null);
   const LRef = useRef<any>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   const points = useMemo(
     () => items.filter((i) => typeof i.latitude === "number" && typeof i.longitude === "number"),
     [items],
   );
+
+  // Group points by rounded coordinates for clustering
+  const groups = useMemo(() => {
+    const map = new Map<string, typeof points>();
+    for (const p of points) {
+      const key = `${p.latitude!.toFixed(5)},${p.longitude!.toFixed(5)}`;
+      const arr = map.get(key) ?? [];
+      arr.push(p);
+      map.set(key, arr);
+    }
+    return Array.from(map.values());
+  }, [points]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -175,7 +190,7 @@ export function MapView({
   useEffect(() => {
     renderPoints();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points]);
+  }, [groups]);
 
   function renderPoints() {
     const L = LRef.current;
@@ -183,24 +198,47 @@ export function MapView({
     const layer = layerRef.current;
     if (!L || !map || !layer) return;
     layer.clearLayers();
-    if (points.length === 0) return;
+    if (groups.length === 0) return;
     const ic = makeIcon(L);
-    const markers = points.map((p) => {
-      const m = L.marker([p.latitude!, p.longitude!], { icon: ic });
-      m.bindPopup(
-        `<strong>${escapeHtml(p.title)}</strong><br/><button data-id="${p.id}" class="lvbl-popup-btn" style="margin-top:6px;color:#2563eb;text-decoration:underline">عرض التفاصيل</button>`,
+    const markers: any[] = [];
+    for (const group of groups) {
+      const first = group[0];
+      const count = group.length;
+      const marker =
+        count > 1
+          ? L.marker([first.latitude!, first.longitude!], {
+              icon: L.divIcon({
+                className: "lvbl-cluster-icon",
+                html: `<div style="background:#2563eb;color:#fff;border-radius:9999px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3)">${count}</div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+              }),
+            })
+          : L.marker([first.latitude!, first.longitude!], { icon: ic });
+
+      const itemsHtml = group
+        .map(
+          (p) =>
+            `<li style="margin:4px 0"><button data-id="${p.id}" class="lvbl-popup-btn" style="text-align:right;color:#2563eb;text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;font:inherit"><div style="font-family:monospace;font-size:11px;color:#6b7280">${escapeHtml(p.complaint_number ?? "")}</div><div>${escapeHtml(p.title)}</div><div style="font-size:11px;color:#6b7280">${escapeHtml(p.status)}</div></button></li>`,
+        )
+        .join("");
+      marker.bindPopup(
+        `<div style="max-width:240px"><strong>${count > 1 ? `${count} شكاوى في هذا الموقع` : "تفاصيل الشكوى"}</strong><ul style="list-style:none;padding:0;margin:6px 0 0">${itemsHtml}</ul></div>`,
       );
-      m.on("popupopen", (e: any) => {
-        const el = (e.popup.getElement() as HTMLElement | null)?.querySelector<HTMLButtonElement>(
-          ".lvbl-popup-btn",
-        );
-        if (el) el.onclick = () => onSelect?.(p.id);
+      marker.on("popupopen", (e: any) => {
+        const root = e.popup.getElement() as HTMLElement | null;
+        root?.querySelectorAll<HTMLButtonElement>(".lvbl-popup-btn").forEach((btn) => {
+          btn.onclick = () => {
+            const id = btn.getAttribute("data-id");
+            if (id) onSelectRef.current?.(id);
+          };
+        });
       });
-      return m;
-    });
+      markers.push(marker);
+    }
     markers.forEach((m: any) => m.addTo(layer));
-    const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.2));
+    const featureGroup = L.featureGroup(markers);
+    map.fitBounds(featureGroup.getBounds().pad(0.2));
   }
 
   return (
@@ -218,6 +256,7 @@ export function MapView({
     </div>
   );
 }
+
 
 function escapeHtml(s: string) {
   return s.replace(

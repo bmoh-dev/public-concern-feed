@@ -68,16 +68,20 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
     let q = admin
       .from("complaints")
       .select(
-        "id, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, attachments(id, storage_path, file_name, mime_type)",
       )
       .eq("assigned_department_id", deptId)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
-    if (data.search)
+    if (data.search) {
+      const s = data.search;
+      const uuid = /^[0-9a-f-]{36}$/i.test(s) ? s : "00000000-0000-0000-0000-000000000000";
       q = q.or(
-        `title.ilike.%${data.search}%,description.ilike.%${data.search}%,id.eq.${/^[0-9a-f-]{36}$/i.test(data.search) ? data.search : "00000000-0000-0000-0000-000000000000"}`,
+        `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
       );
+    }
     const { data: rows, error } = await q.limit(500);
+
     if (error) throw new Error(error.message);
     return rows ?? [];
   });

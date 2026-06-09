@@ -74,7 +74,7 @@ export function PublicHeader() {
               {role?.isGlobalAdmin && (
                 <Button asChild variant="ghost" size="sm">
                   <Link to="/platform-admin">
-                    <Globe className="ms-1 h-4 w-4" /> المنصة
+                    <Globe className="ms-1 h-4 w-4" /> البلديات
                   </Link>
                 </Button>
               )}

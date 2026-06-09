@@ -99,7 +99,7 @@ function AdminPage() {
 
   const exportXlsx = () => {
     const data = (rows as any[]).map((r) => ({
-      "رقم الشكوى": r.id,
+      "رقم الشكوى": r.complaint_number ?? "",
       العنوان: r.title,
       الوصف: r.description,
       الفئة: CATEGORY_LABELS[r.category] ?? r.category,
@@ -171,8 +171,15 @@ function AdminPage() {
             ))}
           </SelectContent>
         </Select>
-        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <div className="flex flex-col gap-0.5">
+          <label className="text-xs text-muted-foreground">من</label>
+          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-xs text-muted-foreground">إلى</label>
+          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
@@ -241,8 +248,11 @@ function AdminPage() {
                     <button onClick={() => setOpenId(r.id)} className="font-medium hover:underline">
                       {r.title}
                     </button>
-                    <div className="text-xs text-muted-foreground">{r.id.slice(0, 8)}…</div>
+                    <div className="text-xs font-mono text-muted-foreground">
+                      {r.complaint_number}
+                    </div>
                   </td>
+
                   <td className="p-3">
                     <div className="font-medium">{r.profiles?.full_name ?? "—"}</div>
                     <div className="text-xs text-muted-foreground">{r.profiles?.email ?? ""}</div>
@@ -332,11 +342,14 @@ function AdminDetail({ id, row, onClose }: { id: string | null; row: any; onClos
     <Dialog open={!!id} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>تفاصيل الشكوى</DialogTitle>
+          <DialogTitle>
+            تفاصيل الشكوى {row?.complaint_number ? `— ${row.complaint_number}` : ""}
+          </DialogTitle>
         </DialogHeader>
         {row && (
           <div className="space-y-3">
             <h3 className="text-lg font-bold">{row.title}</h3>
+
             <div className="text-xs text-muted-foreground">
               المُقدِّم: {row.profiles?.full_name} ({row.profiles?.email})
             </div>
