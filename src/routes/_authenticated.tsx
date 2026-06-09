@@ -113,7 +113,7 @@ function AuthLayout() {
             )}
             {role?.isGlobalAdmin && (
               <Button asChild variant="ghost" size="sm">
-                <Link to="/platform-admin">المنصة</Link>
+                <Link to="/platform-admin">البلديات</Link>
               </Button>
             )}
             <NotificationsMenu />
