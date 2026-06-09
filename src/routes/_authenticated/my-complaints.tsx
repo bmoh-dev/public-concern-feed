@@ -95,9 +95,16 @@ function MyComplaintsPage() {
         </Select>
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground">من</label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground">إلى</label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
         </div>
+
       </div>
 
       {isLoading ? (
