@@ -98,13 +98,14 @@ export const listMyComplaints = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("complaints")
       .select(
-        "id, title, category, status, address, latitude, longitude, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, latitude, longitude, description, created_at, updated_at, attachments(id, storage_path, file_name, mime_type)",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
 
 export const getMyComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
