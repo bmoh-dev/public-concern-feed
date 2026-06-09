@@ -29,7 +29,7 @@ export const searchUsers = createServerFn({ method: "POST" })
     const { data: profiles, error } = await query;
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
-    const roleMap = new Map<string, "admin" | "citizen">();
+    const roleMap = new Map<string, "global_admin" | "super_admin" | "admin" | "citizen">();
     const deptMap = new Map<string, { id: string; name: string }>();
     if (ids.length) {
       const [{ data: roles }, { data: deptRows }] = await Promise.all([
@@ -41,7 +41,14 @@ export const searchUsers = createServerFn({ method: "POST" })
       ]);
       for (const r of roles ?? []) {
         const cur = roleMap.get(r.user_id);
-        if (r.role === "admin" || !cur) roleMap.set(r.user_id, r.role as any);
+        if (
+          !cur ||
+          r.role === "global_admin" ||
+          (r.role === "super_admin" && cur !== "global_admin") ||
+          (r.role === "admin" && cur === "citizen")
+        ) {
+          roleMap.set(r.user_id, r.role as "global_admin" | "super_admin" | "admin" | "citizen");
+        }
       }
       for (const d of (deptRows ?? []) as any[]) {
         deptMap.set(d.user_id, { id: d.department_id, name: d.departments?.name_ar ?? "" });
@@ -51,7 +58,7 @@ export const searchUsers = createServerFn({ method: "POST" })
       id: p.id,
       full_name: p.full_name,
       email: p.email,
-      role: (roleMap.get(p.id) ?? "citizen") as "admin" | "citizen",
+      role: roleMap.get(p.id) ?? "citizen",
       department_id: deptMap.get(p.id)?.id ?? null,
       department_name: deptMap.get(p.id)?.name ?? null,
     }));
