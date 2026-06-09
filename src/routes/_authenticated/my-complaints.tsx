@@ -122,11 +122,17 @@ function MyComplaintsPage() {
               className="rounded-xl border bg-card p-4 text-right shadow-sm transition hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="line-clamp-1 font-semibold">{c.title}</h3>
+                <div className="min-w-0">
+                  <div className="text-xs font-mono text-muted-foreground">
+                    {c.complaint_number}
+                  </div>
+                  <h3 className="line-clamp-1 font-semibold">{c.title}</h3>
+                </div>
                 <Badge variant="outline" className={STATUS_BADGE[c.status]}>
                   {STATUS_LABELS[c.status]}
                 </Badge>
               </div>
+
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Badge variant="secondary">{CATEGORY_LABELS[c.category]}</Badge>
                 <span>{new Date(c.created_at).toLocaleDateString("ar")}</span>
