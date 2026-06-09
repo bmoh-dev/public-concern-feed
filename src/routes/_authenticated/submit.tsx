@@ -148,7 +148,7 @@ function SubmitPage() {
     return <div className="text-sm text-muted-foreground">جارٍ التحميل...</div>;
   }
 
-  if (municipalities.length === 0) {
+  if (municipalities.length === 0 && !state?.isGlobalAdmin) {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 text-center">
         <h1 className="text-xl font-bold">لا توجد بلدية مرتبطة بحسابك</h1>
@@ -161,6 +161,7 @@ function SubmitPage() {
       </div>
     );
   }
+
 
   return (
     <div className="mx-auto max-w-2xl">
