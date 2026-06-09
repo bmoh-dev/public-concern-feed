@@ -115,8 +115,9 @@ export const getMyComplaint = createServerFn({ method: "POST" })
     const { data: row, error } = await supabase
       .from("complaints")
       .select(
-        "id, title, category, status, address, description, created_at, updated_at, user_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, created_at, updated_at, user_id, attachments(id, storage_path, file_name, mime_type)",
       )
+
       .eq("id", data.id)
       .single();
     if (error || !row) throw new Error("Not found");
