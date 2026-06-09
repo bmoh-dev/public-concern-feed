@@ -166,11 +166,17 @@ function ComplaintDetailDialog({ id, onClose }: { id: string | null; onClose: ()
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">{data.title}</h2>
+              <div>
+                <div className="text-xs font-mono text-muted-foreground">
+                  {(data as any).complaint_number}
+                </div>
+                <h2 className="text-lg font-bold">{data.title}</h2>
+              </div>
               <Badge variant="outline" className={STATUS_BADGE[data.status]}>
                 {STATUS_LABELS[data.status]}
               </Badge>
             </div>
+
             <div className="flex flex-wrap gap-2 text-xs">
               <Badge variant="secondary">{CATEGORY_LABELS[data.category]}</Badge>
               <span className="text-muted-foreground">
