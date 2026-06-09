@@ -9,7 +9,11 @@ export async function requireAdminRoute(location: { href: string }) {
   }
 
   const role = await getMyRole();
-  if (!role.isAdmin || !role.roles.includes("admin")) {
+  const allowed =
+    role.roles.includes("admin") ||
+    role.roles.includes("super_admin") ||
+    role.roles.includes("global_admin");
+  if (!allowed) {
     throw new Error("Access denied: admin only");
   }
 
