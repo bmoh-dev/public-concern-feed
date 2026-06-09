@@ -36,8 +36,9 @@ export const getMyRole = createServerFn({ method: "GET" })
     const admin: any = supabaseAdmin;
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const roles = (data ?? []).map((r) => r.role) as string[];
-    const isAdmin = roles.includes("admin");
     const isGlobalAdmin = roles.includes("global_admin");
+    const isSuperAdmin = roles.includes("super_admin");
+    const isAdmin = roles.includes("admin") || isSuperAdmin || isGlobalAdmin;
 
     let departmentId: string | null = null;
     let departmentName: string | null = null;
@@ -71,6 +72,7 @@ export const getMyRole = createServerFn({ method: "GET" })
     return {
       roles,
       isAdmin,
+      isSuperAdmin,
       isGlobalAdmin,
       isDepartmentAdmin,
       departmentId,
