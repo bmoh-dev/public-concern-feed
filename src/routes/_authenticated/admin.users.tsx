@@ -45,7 +45,7 @@ type Row = {
   id: string;
   full_name: string | null;
   email: string | null;
-  role: "admin" | "citizen";
+  role: "global_admin" | "super_admin" | "admin" | "citizen";
   department_id: string | null;
   department_name: string | null;
 };
@@ -156,6 +156,8 @@ function AdminUsersPage() {
               ) : (
                 rows.map((u) => {
                   const isDeptAdmin = !!u.department_id;
+                  const isGlobalAdmin = u.role === "global_admin";
+                  const isSuperAdmin = u.role === "super_admin";
                   const isGeneral = u.role === "admin";
                   return (
                     <tr key={u.id} className="border-t">
@@ -165,9 +167,17 @@ function AdminUsersPage() {
                       </td>
                       <td className="p-3">
                         <Badge
-                          variant={isGeneral ? "default" : isDeptAdmin ? "secondary" : "outline"}
+                          variant={isGlobalAdmin || isSuperAdmin || isGeneral ? "default" : isDeptAdmin ? "secondary" : "outline"}
                         >
-                          {isGeneral ? "مسؤول عام" : isDeptAdmin ? "مسؤول قسم" : "مواطن"}
+                          {isGlobalAdmin
+                            ? "مسؤول المنصة"
+                            : isSuperAdmin
+                              ? "مسؤول بلدية أعلى"
+                              : isGeneral
+                                ? "مسؤول عام"
+                                : isDeptAdmin
+                                  ? "مسؤول قسم"
+                                  : "مواطن"}
                         </Badge>
                       </td>
                       <td className="p-3">
@@ -193,13 +203,17 @@ function AdminUsersPage() {
                         )}
                       </td>
                       <td className="p-3">
-                        <Button
-                          size="sm"
-                          variant={isGeneral ? "outline" : "default"}
-                          onClick={() => setPending(u)}
-                        >
-                          {isGeneral ? "إزالة الإدارة العامة" : "ترقية إلى مسؤول عام"}
-                        </Button>
+                        {isGlobalAdmin || isSuperAdmin ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={isGeneral ? "outline" : "default"}
+                            onClick={() => setPending(u)}
+                          >
+                            {isGeneral ? "إزالة الإدارة العامة" : "ترقية إلى مسؤول عام"}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
