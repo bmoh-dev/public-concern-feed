@@ -193,11 +193,13 @@ function FeedPage() {
               <MapViewLazy
                 items={items.map((c: any) => ({
                   id: c.id,
+                  complaint_number: c.complaint_number ?? null,
                   title: c.title,
-                  status: c.status,
+                  status: STATUS_LABELS[c.status] ?? c.status,
                   latitude: c.latitude ?? null,
                   longitude: c.longitude ?? null,
                 }))}
+
                 onSelect={(id) => setSelectedId(id)}
               />
             </Suspense>
