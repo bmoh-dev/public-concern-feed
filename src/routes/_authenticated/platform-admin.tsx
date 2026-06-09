@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/platform-admin")({
-  head: () => ({ meta: [{ title: "إدارة المنصة" }] }),
+  head: () => ({ meta: [{ title: "إدارة البلديات" }] }),
   beforeLoad: async () => {
     try {
       const role = await getMyRole();
