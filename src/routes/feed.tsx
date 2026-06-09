@@ -248,7 +248,12 @@ function FeedPage() {
             {items.map((c: any) => (
               <article key={c.id} className="rounded-xl border bg-card p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="font-bold">{c.title}</h2>
+                  <div>
+                    <div className="text-xs font-mono text-muted-foreground">
+                      {c.complaint_number}
+                    </div>
+                    <h2 className="font-bold">{c.title}</h2>
+                  </div>
                   <Badge variant="outline" className={STATUS_BADGE[c.status]}>
                     {STATUS_LABELS[c.status]}
                   </Badge>
@@ -257,6 +262,7 @@ function FeedPage() {
                   <Badge variant="secondary">{CATEGORY_LABELS[c.category]}</Badge>
                   <span>مواطن • {new Date(c.created_at).toLocaleDateString("ar")}</span>
                 </div>
+
                 <p className="mt-2 text-sm text-muted-foreground">
                   <strong>الموقع:</strong> {c.address}
                 </p>
