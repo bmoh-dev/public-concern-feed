@@ -5,14 +5,18 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const admin = supabaseAdmin as any;
 
-async function assertGeneralAdmin(userId: string) {
+async function isGeneralAdmin(userId: string): Promise<boolean> {
   const { data } = await admin
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (!data) throw new Error("Forbidden: general admin only");
+    .in("role", ["admin", "super_admin", "global_admin"]);
+  return !!(data && data.length > 0);
+}
+
+async function assertGeneralAdmin(userId: string) {
+  const ok = await isGeneralAdmin(userId);
+  if (!ok) throw new Error("Forbidden: general admin only");
 }
 
 async function getMyDepartmentId(userId: string): Promise<string | null> {
@@ -22,16 +26,6 @@ async function getMyDepartmentId(userId: string): Promise<string | null> {
     .eq("user_id", userId)
     .maybeSingle();
   return data?.department_id ?? null;
-}
-
-async function isGeneralAdmin(userId: string): Promise<boolean> {
-  const { data } = await admin
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "admin")
-    .maybeSingle();
-  return !!data;
 }
 
 export const listDepartments = createServerFn({ method: "GET" })
