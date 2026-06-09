@@ -248,8 +248,11 @@ function AdminPage() {
                     <button onClick={() => setOpenId(r.id)} className="font-medium hover:underline">
                       {r.title}
                     </button>
-                    <div className="text-xs text-muted-foreground">{r.id.slice(0, 8)}…</div>
+                    <div className="text-xs font-mono text-muted-foreground">
+                      {r.complaint_number}
+                    </div>
                   </td>
+
                   <td className="p-3">
                     <div className="font-medium">{r.profiles?.full_name ?? "—"}</div>
                     <div className="text-xs text-muted-foreground">{r.profiles?.email ?? ""}</div>
