@@ -32,7 +32,7 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
     const { userId } = context;
     const admin: any = supabaseAdmin;
 
-    const [{ data: memberships }, { data: pending }] = await Promise.all([
+    const [{ data: memberships }, { data: pending }, { data: roles }] = await Promise.all([
       admin
         .from("municipality_members")
         .select("municipality_id, role, joined_at, municipalities:municipality_id(id,name,wilaya,status)")
@@ -43,8 +43,10 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
         .select("id, name, wilaya, status, rejection_reason")
         .eq("owner_user_id", userId)
         .in("status", ["pending", "rejected"]),
+      admin.from("user_roles").select("role").eq("user_id", userId),
     ]);
 
+    const isGlobalAdmin = (roles ?? []).some((r: any) => r.role === "global_admin");
     const verifiedMemberships = (memberships ?? []).filter(
       (m: any) => m.municipalities?.status === "verified",
     );
@@ -56,6 +58,7 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
     }));
 
     return {
+      isGlobalAdmin,
       municipalities: list,
       currentMunicipalityId: list[0]?.id ?? null,
       pendingOwned: (pending ?? []).map((p: any) => ({
@@ -65,9 +68,10 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
         status: p.status as "pending" | "rejected",
         rejection_reason: p.rejection_reason,
       })),
-      needsOnboarding: list.length === 0,
+      needsOnboarding: !isGlobalAdmin && list.length === 0,
     };
   });
+
 
 export const createMunicipality = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
