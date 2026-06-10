@@ -267,12 +267,25 @@ function SubmitPage() {
   }
 
 
+  const hasDraft =
+    !!(title || address || description || coords || uploads.length > 0);
+
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold">تقديم شكوى جديدة</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        سيتم استخدام اسم وبريد حساب Google الموثّق تلقائياً.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">تقديم شكوى جديدة</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            سيتم استخدام اسم وبريد حساب Google الموثّق تلقائياً.
+          </p>
+        </div>
+        {hasDraft && (
+          <Button type="button" variant="ghost" size="sm" onClick={discardDraft}>
+            حذف المسودة
+          </Button>
+        )}
+      </div>
+
 
 
       <form onSubmit={onSubmit} className="mt-6 space-y-5 rounded-xl border bg-card p-6 shadow-sm">
