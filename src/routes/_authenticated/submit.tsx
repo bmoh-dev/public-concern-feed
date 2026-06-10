@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { submitComplaint } from "@/lib/complaints.functions";
@@ -38,6 +38,19 @@ type UploadItem = {
   error?: string;
 };
 
+const DRAFT_PREFIX = "complaint-draft:";
+export function clearAllComplaintDrafts() {
+  if (typeof window === "undefined") return;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {}
+}
+
 function SubmitPage() {
   const navigate = useNavigate();
   const submitFn = useServerFn(submitComplaint);
@@ -46,6 +59,8 @@ function SubmitPage() {
     queryKey: ["onboarding"],
     queryFn: () => stateFn(),
   });
+  const [userId, setUserId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string>("infrastructure");
   const [address, setAddress] = useState("");
@@ -55,6 +70,91 @@ function SubmitPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [selectedMunicipality, setSelectedMunicipality] = useState<string>("");
+  const submittedRef = useRef(false);
+
+  const draftKey = userId ? `${DRAFT_PREFIX}${userId}` : null;
+
+  // Hydrate from localStorage once user id is known
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+      if (!uid) {
+        setHydrated(true);
+        return;
+      }
+      try {
+        const raw = localStorage.getItem(`${DRAFT_PREFIX}${uid}`);
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (typeof d.title === "string") setTitle(d.title);
+          if (typeof d.category === "string") setCategory(d.category);
+          if (typeof d.address === "string") setAddress(d.address);
+          if (typeof d.description === "string") setDescription(d.description);
+          if (d.coords && typeof d.coords.lat === "number") setCoords(d.coords);
+          if (typeof d.selectedMunicipality === "string")
+            setSelectedMunicipality(d.selectedMunicipality);
+          if (Array.isArray(d.uploads)) {
+            const restored: UploadItem[] = d.uploads
+              .filter((u: any) => u && u.storage_path && u.file_name)
+              .map((u: any) => ({
+                file: new File([], u.file_name, { type: u.mime_type || "" }),
+                progress: 100,
+                storage_path: u.storage_path,
+              }));
+            setUploads(restored);
+          }
+        }
+      } catch {}
+      setHydrated(true);
+    });
+  }, []);
+
+  // Persist draft on changes
+  useEffect(() => {
+    if (!hydrated || !draftKey) return;
+    const hasContent =
+      title || address || description || coords || uploads.length > 0 ||
+      selectedMunicipality || category !== "infrastructure";
+    try {
+      if (!hasContent) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+      const payload = {
+        title,
+        category,
+        address,
+        description,
+        coords,
+        selectedMunicipality,
+        uploads: uploads
+          .filter((u) => u.storage_path)
+          .map((u) => ({
+            storage_path: u.storage_path,
+            file_name: u.file.name,
+            mime_type: u.file.type,
+            size_bytes: u.file.size,
+          })),
+      };
+      localStorage.setItem(draftKey, JSON.stringify(payload));
+    } catch {}
+  }, [hydrated, draftKey, title, category, address, description, coords, uploads, selectedMunicipality]);
+
+  const discardDraft = () => {
+    if (draftKey) {
+      try { localStorage.removeItem(draftKey); } catch {}
+    }
+    setTitle("");
+    setCategory("infrastructure");
+    setAddress("");
+    setDescription("");
+    setUploads([]);
+    setCoords(null);
+    setSelectedMunicipality("");
+    toast.success("تم حذف المسودة");
+  };
+
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return;
@@ -129,6 +229,10 @@ function SubmitPage() {
         },
       });
       console.log("[submitComplaint] success", result);
+      submittedRef.current = true;
+      if (draftKey) {
+        try { localStorage.removeItem(draftKey); } catch {}
+      }
       toast.success("تم استلام شكواك بنجاح");
       navigate({ to: "/my-complaints" });
     } catch (e: any) {
@@ -163,12 +267,25 @@ function SubmitPage() {
   }
 
 
+  const hasDraft =
+    !!(title || address || description || coords || uploads.length > 0);
+
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold">تقديم شكوى جديدة</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        سيتم استخدام اسم وبريد حساب Google الموثّق تلقائياً.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">تقديم شكوى جديدة</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            سيتم استخدام اسم وبريد حساب Google الموثّق تلقائياً.
+          </p>
+        </div>
+        {hasDraft && (
+          <Button type="button" variant="ghost" size="sm" onClick={discardDraft}>
+            حذف المسودة
+          </Button>
+        )}
+      </div>
+
 
 
       <form onSubmit={onSubmit} className="mt-6 space-y-5 rounded-xl border bg-card p-6 shadow-sm">

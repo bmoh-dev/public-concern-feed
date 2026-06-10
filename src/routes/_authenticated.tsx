@@ -68,6 +68,10 @@ function AuthLayout() {
   }, [navigate, router, qc]);
 
   const logout = async () => {
+    try {
+      const { clearAllComplaintDrafts } = await import("./_authenticated/submit");
+      clearAllComplaintDrafts();
+    } catch {}
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true });
   };
