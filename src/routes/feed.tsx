@@ -164,8 +164,8 @@ function FeedPage() {
           </div>
         </div>
 
-        <Tabs value={tab} onValueChange={setTab} className="mt-4">
-          <TabsList className="flex w-full flex-wrap">
+        <Tabs value={tab} onValueChange={setTab} className="mt-4" dir="rtl">
+          <TabsList className="flex w-full flex-wrap justify-start">
             <TabsTrigger value="all">الكل</TabsTrigger>
             {CATEGORIES.map((c) => (
               <TabsTrigger key={c} value={c}>

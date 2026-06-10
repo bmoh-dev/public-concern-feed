@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listMyComplaints, getMyComplaint } from "@/lib/complaints.functions";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,7 +15,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES, STATUSES } from "@/lib/i18n";
-import { Calendar, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/my-complaints")({
@@ -57,7 +58,7 @@ function MyComplaintsPage() {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-5">
+      <div className="mt-4 grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-6">
         <div className="relative md:col-span-2">
           <Search className="absolute top-2.5 right-3 h-4 w-4 text-muted-foreground" />
           <Input
@@ -93,17 +94,7 @@ function MyComplaintsPage() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <div className="flex flex-col gap-0.5">
-            <label className="text-xs text-muted-foreground">من</label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <label className="text-xs text-muted-foreground">إلى</label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-        </div>
+        <DateRangeFilter from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
 
       </div>
 

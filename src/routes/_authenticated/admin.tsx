@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { adminListComplaints, adminMetrics, adminUpdate } from "@/lib/complaints.functions";
 import { requireAdminRoute } from "@/lib/admin-route-guard";
 import { AttachmentGallery } from "@/components/AttachmentGallery";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -171,14 +172,7 @@ function AdminPage() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground">من</label>
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground">إلى</label>
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        </div>
+        <DateRangeFilter from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
 
       </div>
 
