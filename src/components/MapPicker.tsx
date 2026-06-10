@@ -216,24 +216,38 @@ export function MapView({
             })
           : L.marker([first.latitude!, first.longitude!], { icon: ic });
 
-      const itemsHtml = group
-        .map(
-          (p) =>
-            `<li style="margin:4px 0"><button data-id="${p.id}" class="lvbl-popup-btn" style="text-align:right;color:#2563eb;text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;font:inherit"><div style="font-family:monospace;font-size:11px;color:#6b7280">${escapeHtml(p.complaint_number ?? "")}</div><div>${escapeHtml(p.title)}</div><div style="font-size:11px;color:#6b7280">${escapeHtml(p.status)}</div></button></li>`,
-        )
-        .join("");
-      marker.bindPopup(
-        `<div style="max-width:240px"><strong>${count > 1 ? `${count} شكاوى في هذا الموقع` : "تفاصيل الشكوى"}</strong><ul style="list-style:none;padding:0;margin:6px 0 0">${itemsHtml}</ul></div>`,
-      );
-      marker.on("popupopen", (e: any) => {
-        const root = e.popup.getElement() as HTMLElement | null;
-        root?.querySelectorAll<HTMLButtonElement>(".lvbl-popup-btn").forEach((btn) => {
-          btn.onclick = () => {
-            const id = btn.getAttribute("data-id");
-            if (id) onSelectRef.current?.(id);
-          };
+      const popup = document.createElement("div");
+      popup.style.maxWidth = "260px";
+      popup.innerHTML = `<strong>${count > 1 ? `${count} شكاوى في هذا الموقع` : "تفاصيل الشكوى"}</strong>`;
+      const list = document.createElement("ul");
+      list.style.listStyle = "none";
+      list.style.padding = "0";
+      list.style.margin = "8px 0 0";
+      group.forEach((p) => {
+        const item = document.createElement("li");
+        item.style.margin = "6px 0";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "lvbl-popup-btn";
+        button.style.cssText =
+          "width:100%;text-align:right;color:#2563eb;text-decoration:underline;cursor:pointer;background:none;border:0;padding:2px 0;font:inherit";
+        button.innerHTML = `<div style="font-family:monospace;font-size:11px;color:#6b7280">${escapeHtml(
+          p.complaint_number ?? "",
+        )}</div><div>${escapeHtml(p.title)}</div><div style="font-size:11px;color:#6b7280">${escapeHtml(
+          p.status,
+        )}</div>`;
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onSelectRef.current?.(p.id);
+          map.closePopup();
         });
+        item.appendChild(button);
+        list.appendChild(item);
       });
+      popup.appendChild(list);
+      L.DomEvent.disableClickPropagation(popup);
+      marker.bindPopup(popup);
       markers.push(marker);
     }
     markers.forEach((m: any) => m.addTo(layer));
