@@ -229,6 +229,10 @@ function SubmitPage() {
         },
       });
       console.log("[submitComplaint] success", result);
+      submittedRef.current = true;
+      if (draftKey) {
+        try { localStorage.removeItem(draftKey); } catch {}
+      }
       toast.success("تم استلام شكواك بنجاح");
       navigate({ to: "/my-complaints" });
     } catch (e: any) {
