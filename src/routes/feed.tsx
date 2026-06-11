@@ -19,6 +19,8 @@ import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/
 import { AttachmentThumb } from "./_authenticated/my-complaints";
 import { Search, List, Map as MapIcon } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
+import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const MapViewLazy = lazy(() =>
