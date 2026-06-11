@@ -19,6 +19,8 @@ import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/
 import { AttachmentThumb } from "./_authenticated/my-complaints";
 import { Search, List, Map as MapIcon } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
+import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const MapViewLazy = lazy(() =>
@@ -47,6 +49,12 @@ function FeedPage() {
   const [committed, setCommitted] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session?.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setIsAuthed(!!s?.user));
+    return () => sub.subscription.unsubscribe();
+  }, []);
   const listFn = useServerFn(listPublicComplaints);
   const munFn = useServerFn(listVerifiedMunicipalities);
 
@@ -94,7 +102,7 @@ function FeedPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PublicHeader />
+      {isAuthed ? <AuthenticatedHeader /> : <PublicHeader />}
 
       <main className="container mx-auto max-w-6xl px-4 py-6">
         <h1 className="text-2xl font-bold">الشكاوى العامة</h1>
