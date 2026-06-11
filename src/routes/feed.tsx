@@ -49,6 +49,12 @@ function FeedPage() {
   const [committed, setCommitted] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session?.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setIsAuthed(!!s?.user));
+    return () => sub.subscription.unsubscribe();
+  }, []);
   const listFn = useServerFn(listPublicComplaints);
   const munFn = useServerFn(listVerifiedMunicipalities);
 
