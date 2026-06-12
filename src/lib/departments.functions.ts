@@ -2,8 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { signAttachments } from "@/lib/complaints.functions";
 
 const admin = supabaseAdmin as any;
+
 
 async function isGeneralAdmin(userId: string): Promise<boolean> {
   const { data } = await admin
