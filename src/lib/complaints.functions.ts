@@ -247,7 +247,8 @@ export const adminListComplaints = createServerFn({ method: "POST" })
         (profs ?? []).map((p) => [p.id, { full_name: p.full_name, email: p.email }]),
       );
     }
-    return (rows ?? []).map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null }));
+    const enriched = await withSignedAttachments(rows ?? []);
+    return enriched.map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null }));
   });
 
 export const adminMetrics = createServerFn({ method: "GET" })
