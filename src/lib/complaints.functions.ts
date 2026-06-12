@@ -186,7 +186,7 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
     if (data.search) q = q.ilike("title", `%${data.search}%`);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    return withSignedAttachments(rows ?? []);
   });
 
 
