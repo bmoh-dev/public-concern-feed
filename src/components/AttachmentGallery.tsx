@@ -33,8 +33,7 @@ export function AttachmentGallery({
 }
 
 function MediaCard({ attachment }: { attachment: AttachmentItem }) {
-  const url = supabase.storage.from("complaint-attachments").getPublicUrl(attachment.storage_path)
-    .data.publicUrl;
+  const url = attachment.signed_url ?? "";
   const isImage = attachment.mime_type.startsWith("image/");
   const isVideo = attachment.mime_type.startsWith("video/");
   const [lightbox, setLightbox] = useState(false);
