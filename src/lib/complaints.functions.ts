@@ -6,6 +6,32 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const CategoryEnum = z.enum(["infrastructure", "public_lighting", "cleanliness", "other"]);
 const StatusEnum = z.enum(["pending", "in_progress", "resolved"]);
 
+const SIGNED_URL_TTL = 3600; // 1 hour
+
+export async function signAttachments<T extends { storage_path: string }>(
+  attachments: T[] | null | undefined,
+): Promise<(T & { signed_url: string | null })[]> {
+  if (!attachments?.length) return [];
+  const paths = attachments.map((a) => a.storage_path);
+  const { data } = await (supabaseAdmin as any).storage
+    .from("complaint-attachments")
+    .createSignedUrls(paths, SIGNED_URL_TTL);
+  const urlByPath = new Map<string, string>();
+  for (const s of (data ?? []) as Array<{ path: string; signedUrl: string }>) {
+    if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl);
+  }
+  return attachments.map((a) => ({ ...a, signed_url: urlByPath.get(a.storage_path) ?? null }));
+}
+
+async function withSignedAttachments<R extends { attachments?: any[] | null }>(
+  rows: R[],
+): Promise<R[]> {
+  return Promise.all(
+    rows.map(async (r) => ({ ...r, attachments: await signAttachments(r.attachments ?? []) })),
+  );
+}
+
+
 export const submitComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
