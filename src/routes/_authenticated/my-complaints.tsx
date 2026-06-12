@@ -205,10 +205,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export function AttachmentThumb({
   a,
 }: {
-  a: { storage_path: string; mime_type: string; file_name: string };
+  a: { storage_path: string; mime_type: string; file_name: string; signed_url?: string | null };
 }) {
-  const url = supabase.storage.from("complaint-attachments").getPublicUrl(a.storage_path)
-    .data.publicUrl;
+  const url = a.signed_url ?? "";
   const isImage = a.mime_type.startsWith("image/");
   const isVideo = a.mime_type.startsWith("video/");
   return (
