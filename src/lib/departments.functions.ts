@@ -85,7 +85,12 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
     const { data: rows, error } = await q.limit(500);
 
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    return Promise.all(
+      (rows ?? []).map(async (r: any) => ({
+        ...r,
+        attachments: await signAttachments(r.attachments ?? []),
+      })),
+    );
   });
 
 export const departmentUpdateComplaint = createServerFn({ method: "POST" })
