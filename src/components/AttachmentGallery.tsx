@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 export type AttachmentItem = {
   id: string;
   storage_path: string;
   file_name: string;
   mime_type: string;
+  signed_url?: string | null;
 };
+
 
 export function AttachmentGallery({
   attachments,
