@@ -2,8 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { signAttachments } from "@/lib/complaints.functions";
 
 const admin = supabaseAdmin as any;
+
 
 async function isGeneralAdmin(userId: string): Promise<boolean> {
   const { data } = await admin
@@ -83,7 +85,12 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
     const { data: rows, error } = await q.limit(500);
 
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    return Promise.all(
+      (rows ?? []).map(async (r: any) => ({
+        ...r,
+        attachments: await signAttachments(r.attachments ?? []),
+      })),
+    );
   });
 
 export const departmentUpdateComplaint = createServerFn({ method: "POST" })

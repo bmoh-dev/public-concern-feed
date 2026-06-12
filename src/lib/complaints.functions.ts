@@ -6,6 +6,32 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const CategoryEnum = z.enum(["infrastructure", "public_lighting", "cleanliness", "other"]);
 const StatusEnum = z.enum(["pending", "in_progress", "resolved"]);
 
+const SIGNED_URL_TTL = 3600; // 1 hour
+
+export async function signAttachments<T extends { storage_path: string }>(
+  attachments: T[] | null | undefined,
+): Promise<(T & { signed_url: string | null })[]> {
+  if (!attachments?.length) return [];
+  const paths = attachments.map((a) => a.storage_path);
+  const { data } = await (supabaseAdmin as any).storage
+    .from("complaint-attachments")
+    .createSignedUrls(paths, SIGNED_URL_TTL);
+  const urlByPath = new Map<string, string>();
+  for (const s of (data ?? []) as Array<{ path: string; signedUrl: string }>) {
+    if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl);
+  }
+  return attachments.map((a) => ({ ...a, signed_url: urlByPath.get(a.storage_path) ?? null }));
+}
+
+async function withSignedAttachments<R extends { attachments?: any[] | null }>(
+  rows: R[],
+): Promise<R[]> {
+  return Promise.all(
+    rows.map(async (r) => ({ ...r, attachments: await signAttachments(r.attachments ?? []) })),
+  );
+}
+
+
 export const submitComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
@@ -103,7 +129,7 @@ export const listMyComplaints = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return withSignedAttachments(data ?? []);
   });
 
 
@@ -122,7 +148,7 @@ export const getMyComplaint = createServerFn({ method: "POST" })
       .single();
     if (error || !row) throw new Error("Not found");
     if (row.user_id !== userId) throw new Error("Forbidden");
-    return row;
+    return { ...row, attachments: await signAttachments(row.attachments ?? []) };
   });
 
 // PUBLIC feed — anon-safe, requires a verified municipality_id
@@ -160,7 +186,7 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
     if (data.search) q = q.ilike("title", `%${data.search}%`);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    return withSignedAttachments(rows ?? []);
   });
 
 
@@ -221,7 +247,8 @@ export const adminListComplaints = createServerFn({ method: "POST" })
         (profs ?? []).map((p) => [p.id, { full_name: p.full_name, email: p.email }]),
       );
     }
-    return (rows ?? []).map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null }));
+    const enriched = await withSignedAttachments(rows ?? []);
+    return enriched.map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null }));
   });
 
 export const adminMetrics = createServerFn({ method: "GET" })
