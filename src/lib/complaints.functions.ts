@@ -129,7 +129,7 @@ export const listMyComplaints = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return withSignedAttachments(data ?? []);
   });
 
 
