@@ -148,7 +148,7 @@ export const getMyComplaint = createServerFn({ method: "POST" })
       .single();
     if (error || !row) throw new Error("Not found");
     if (row.user_id !== userId) throw new Error("Forbidden");
-    return row;
+    return { ...row, attachments: await signAttachments(row.attachments ?? []) };
   });
 
 // PUBLIC feed — anon-safe, requires a verified municipality_id
