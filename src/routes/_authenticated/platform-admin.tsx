@@ -8,9 +8,23 @@ import {
   platformAdminReject,
 } from "@/lib/municipalities.functions";
 import { getMyRole } from "@/lib/notifications.functions";
+import {
+  getPlatformBootstrapState,
+  bootstrapGlobalAdmin,
+} from "@/lib/platform.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/platform-admin")({
@@ -18,8 +32,13 @@ export const Route = createFileRoute("/_authenticated/platform-admin")({
   beforeLoad: async () => {
     try {
       const role = await getMyRole();
-      if (!role.isGlobalAdmin) throw redirect({ to: "/my-complaints" });
-    } catch {
+      if (role.isGlobalAdmin) return;
+      // Allow access if platform has not been initialized yet (bootstrap path)
+      const state = await getPlatformBootstrapState();
+      if (!state.hasGlobalAdmin) return;
+      throw redirect({ to: "/my-complaints" });
+    } catch (e: any) {
+      if (e?.isRedirect) throw e;
       throw redirect({ to: "/my-complaints" });
     }
   },
