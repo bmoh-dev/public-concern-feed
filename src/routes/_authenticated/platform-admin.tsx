@@ -50,11 +50,71 @@ function PlatformAdminPage() {
   const listFn = useServerFn(platformAdminListMunicipalities);
   const approveFn = useServerFn(platformAdminApprove);
   const rejectFn = useServerFn(platformAdminReject);
+  const bootstrapStateFn = useServerFn(getPlatformBootstrapState);
+  const bootstrapFn = useServerFn(bootstrapGlobalAdmin);
+
+  const { data: bootstrapState } = useQuery({
+    queryKey: ["platform-bootstrap-state"],
+    queryFn: () => bootstrapStateFn(),
+  });
+  const needsBootstrap = bootstrapState ? !bootstrapState.hasGlobalAdmin : false;
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(false);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["platform-admin-municipalities"],
     queryFn: () => listFn(),
+    enabled: !needsBootstrap && bootstrapState !== undefined,
   });
+
+  if (needsBootstrap) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">إدارة المنصّة</h1>
+        <div className="rounded-xl border bg-card p-6 space-y-3">
+          <h2 className="text-xl font-semibold">تهيئة إدارة المنصّة</h2>
+          <p className="text-sm text-muted-foreground">
+            يمكن تنفيذ هذه العملية لمرة واحدة فقط.
+          </p>
+          <Button onClick={() => setConfirmOpen(true)}>بدء التهيئة</Button>
+        </div>
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد التهيئة</AlertDialogTitle>
+              <AlertDialogDescription>
+                أنت على وشك أن تصبح مسؤول المنصّة. يمكن تنفيذ هذه العملية لمرة واحدة فقط.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bootstrapping}>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={bootstrapping}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  setBootstrapping(true);
+                  try {
+                    await bootstrapFn();
+                    toast.success("تمت التهيئة بنجاح");
+                    setConfirmOpen(false);
+                    await qc.invalidateQueries();
+                  } catch (err: any) {
+                    toast.error(err?.message || "فشلت التهيئة");
+                  } finally {
+                    setBootstrapping(false);
+                  }
+                }}
+              >
+                {bootstrapping ? "جارٍ التنفيذ..." : "تأكيد"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
+
   const [filter, setFilter] = useState<"all" | "pending" | "verified" | "rejected">("all");
   const [reasonFor, setReasonFor] = useState<string | null>(null);
   const [reason, setReason] = useState("");
