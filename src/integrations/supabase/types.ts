@@ -346,6 +346,24 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          id: boolean
+          initialized_at: string | null
+          initialized_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          initialized_at?: string | null
+          initialized_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          initialized_at?: string | null
+          initialized_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -429,6 +447,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      abandon_global_admin: { Args: never; Returns: undefined }
+      bootstrap_global_admin: { Args: never; Returns: undefined }
       get_user_department: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -450,6 +470,10 @@ export type Database = {
       is_municipality_super_admin: {
         Args: { _municipality_id: string; _user_id: string }
         Returns: boolean
+      }
+      promote_global_admin: {
+        Args: { target_user: string }
+        Returns: undefined
       }
     }
     Enums: {
