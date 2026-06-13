@@ -45,9 +45,10 @@ export function AuthenticatedHeader() {
         });
       }
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
-      qc.invalidateQueries();
+      if (event !== "SIGNED_OUT") qc.invalidateQueries();
       if (!session) navigate({ to: "/login", replace: true });
     });
     return () => sub.subscription.unsubscribe();
@@ -58,6 +59,8 @@ export function AuthenticatedHeader() {
       const { clearAllComplaintDrafts } = await import("@/routes/_authenticated/submit");
       clearAllComplaintDrafts();
     } catch {}
+    await qc.cancelQueries();
+    qc.clear();
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true });
   };
