@@ -14,6 +14,7 @@ import { Route as FeedRouteImport } from './routes/feed'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSubmitRouteImport } from './routes/_authenticated/submit'
+import { Route as AuthenticatedPlatformMunicipalitiesRouteImport } from './routes/_authenticated/platform-municipalities'
 import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authenticated/platform-admin'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMyComplaintsRouteImport } from './routes/_authenticated/my-complaints'
@@ -45,6 +46,12 @@ const AuthenticatedSubmitRoute = AuthenticatedSubmitRouteImport.update({
   path: '/submit',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPlatformMunicipalitiesRoute =
+  AuthenticatedPlatformMunicipalitiesRouteImport.update({
+    id: '/platform-municipalities',
+    path: '/platform-municipalities',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPlatformAdminRoute =
   AuthenticatedPlatformAdminRouteImport.update({
     id: '/platform-admin',
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
@@ -99,6 +107,7 @@ export interface FileRoutesByTo {
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
@@ -113,6 +122,7 @@ export interface FileRoutesById {
   '/_authenticated/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/_authenticated/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/_authenticated/submit': typeof AuthenticatedSubmitRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
 }
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/my-complaints'
     | '/onboarding'
     | '/platform-admin'
+    | '/platform-municipalities'
     | '/submit'
     | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/my-complaints'
     | '/onboarding'
     | '/platform-admin'
+    | '/platform-municipalities'
     | '/submit'
     | '/admin/users'
   id:
@@ -152,6 +164,7 @@ export interface FileRouteTypes {
     | '/_authenticated/my-complaints'
     | '/_authenticated/onboarding'
     | '/_authenticated/platform-admin'
+    | '/_authenticated/platform-municipalities'
     | '/_authenticated/submit'
     | '/_authenticated/admin/users'
   fileRoutesById: FileRoutesById
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       path: '/submit'
       fullPath: '/submit'
       preLoaderRoute: typeof AuthenticatedSubmitRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/platform-municipalities': {
+      id: '/_authenticated/platform-municipalities'
+      path: '/platform-municipalities'
+      fullPath: '/platform-municipalities'
+      preLoaderRoute: typeof AuthenticatedPlatformMunicipalitiesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/platform-admin': {
@@ -262,6 +282,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMyComplaintsRoute: typeof AuthenticatedMyComplaintsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPlatformAdminRoute: typeof AuthenticatedPlatformAdminRoute
+  AuthenticatedPlatformMunicipalitiesRoute: typeof AuthenticatedPlatformMunicipalitiesRoute
   AuthenticatedSubmitRoute: typeof AuthenticatedSubmitRoute
 }
 
@@ -271,6 +292,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMyComplaintsRoute: AuthenticatedMyComplaintsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPlatformAdminRoute: AuthenticatedPlatformAdminRoute,
+  AuthenticatedPlatformMunicipalitiesRoute:
+    AuthenticatedPlatformMunicipalitiesRoute,
   AuthenticatedSubmitRoute: AuthenticatedSubmitRoute,
 }
 
