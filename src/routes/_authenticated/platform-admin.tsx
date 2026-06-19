@@ -1,20 +1,18 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  platformAdminListMunicipalities,
-  platformAdminApprove,
-  platformAdminReject,
-} from "@/lib/municipalities.functions";
 import { getMyRole } from "@/lib/notifications.functions";
 import {
   getPlatformBootstrapState,
   bootstrapGlobalAdmin,
+  listGlobalAdmins,
+  promoteGlobalAdminByEmail,
+  abandonGlobalAdmin,
 } from "@/lib/platform.functions";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,12 +26,11 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/platform-admin")({
-  head: () => ({ meta: [{ title: "إدارة البلديات" }] }),
+  head: () => ({ meta: [{ title: "إدارة المنصّة" }] }),
   beforeLoad: async () => {
     try {
       const role = await getMyRole();
       if (role.isGlobalAdmin) return;
-      // Allow access if platform has not been initialized yet (bootstrap path)
       const state = await getPlatformBootstrapState();
       if (!state.hasGlobalAdmin) return;
       throw redirect({ to: "/my-complaints" });
@@ -47,11 +44,11 @@ export const Route = createFileRoute("/_authenticated/platform-admin")({
 
 function PlatformAdminPage() {
   const qc = useQueryClient();
-  const listFn = useServerFn(platformAdminListMunicipalities);
-  const approveFn = useServerFn(platformAdminApprove);
-  const rejectFn = useServerFn(platformAdminReject);
   const bootstrapStateFn = useServerFn(getPlatformBootstrapState);
   const bootstrapFn = useServerFn(bootstrapGlobalAdmin);
+  const listAdminsFn = useServerFn(listGlobalAdmins);
+  const promoteFn = useServerFn(promoteGlobalAdminByEmail);
+  const abandonFn = useServerFn(abandonGlobalAdmin);
 
   const { data: bootstrapState } = useQuery({
     queryKey: ["platform-bootstrap-state"],
@@ -59,14 +56,19 @@ function PlatformAdminPage() {
   });
   const needsBootstrap = bootstrapState ? !bootstrapState.hasGlobalAdmin : false;
 
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmBootstrap, setConfirmBootstrap] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
 
-  const { data = [], isLoading } = useQuery({
-    queryKey: ["platform-admin-municipalities"],
-    queryFn: () => listFn(),
+  const { data: adminsData, isLoading: adminsLoading } = useQuery({
+    queryKey: ["platform-global-admins"],
+    queryFn: () => listAdminsFn(),
     enabled: !needsBootstrap && bootstrapState !== undefined,
   });
+
+  const [email, setEmail] = useState("");
+  const [promoting, setPromoting] = useState(false);
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
+  const [abandoning, setAbandoning] = useState(false);
 
   if (needsBootstrap) {
     return (
@@ -77,9 +79,9 @@ function PlatformAdminPage() {
           <p className="text-sm text-muted-foreground">
             يمكن تنفيذ هذه العملية لمرة واحدة فقط.
           </p>
-          <Button onClick={() => setConfirmOpen(true)}>بدء التهيئة</Button>
+          <Button onClick={() => setConfirmBootstrap(true)}>بدء التهيئة</Button>
         </div>
-        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialog open={confirmBootstrap} onOpenChange={setConfirmBootstrap}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>تأكيد التهيئة</AlertDialogTitle>
@@ -97,7 +99,7 @@ function PlatformAdminPage() {
                   try {
                     await bootstrapFn();
                     toast.success("تمت التهيئة بنجاح");
-                    setConfirmOpen(false);
+                    setConfirmBootstrap(false);
                     await qc.invalidateQueries();
                   } catch (err: any) {
                     toast.error(err?.message || "فشلت التهيئة");
@@ -115,123 +117,171 @@ function PlatformAdminPage() {
     );
   }
 
-  const [filter, setFilter] = useState<"all" | "pending" | "verified" | "rejected">("all");
-  const [reasonFor, setReasonFor] = useState<string | null>(null);
-  const [reason, setReason] = useState("");
+  const admins = adminsData?.admins ?? [];
+  const selfIsLast = admins.length === 1 && admins[0]?.is_self;
 
-  const filtered = data.filter((m: any) => filter === "all" || m.status === filter);
+  const handlePromote = async () => {
+    const value = email.trim();
+    if (!value) return toast.error("أدخل بريداً إلكترونياً");
+    setPromoting(true);
+    try {
+      await promoteFn({ data: { email: value } });
+      toast.success("تمت الترقية");
+      setEmail("");
+      qc.invalidateQueries({ queryKey: ["platform-global-admins"] });
+    } catch (e: any) {
+      toast.error(e?.message || "فشلت الترقية");
+    } finally {
+      setPromoting(false);
+    }
+  };
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["platform-admin-municipalities"] });
+  const handleAbandon = async () => {
+    setAbandoning(true);
+    try {
+      await abandonFn();
+      toast.success("تم التخلي عن المسؤولية");
+      setConfirmAbandon(false);
+      await qc.invalidateQueries();
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر التخلي");
+    } finally {
+      setAbandoning(false);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">إدارة البلديات</h1>
-      <div className="flex gap-2">
-        {(["all", "pending", "verified", "rejected"] as const).map((s) => (
-          <Button
-            key={s}
-            size="sm"
-            variant={filter === s ? "default" : "outline"}
-            onClick={() => setFilter(s)}
-          >
-            {s === "all" ? "الكل" : s === "pending" ? "قيد المراجعة" : s === "verified" ? "موثّقة" : "مرفوضة"}
-          </Button>
-        ))}
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">إدارة المنصّة</h1>
+          <p className="text-sm text-muted-foreground">
+            إدارة مسؤولي المنصّة فقط. إدارة البلديات تتم من صفحاتها الخاصة.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/platform-municipalities">طلبات اعتماد البلديات</Link>
+        </Button>
       </div>
 
+      <section className="rounded-xl border bg-card p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg font-semibold">مسؤولو المنصّة</h2>
+            {adminsData?.initialized_at && (
+              <p className="text-xs text-muted-foreground mt-1">
+                تمت التهيئة في {new Date(adminsData.initialized_at).toLocaleString("ar")}
+                {adminsData.initializer && (
+                  <>
+                    {" "}
+                    بواسطة{" "}
+                    {adminsData.initializer.full_name ||
+                      adminsData.initializer.email ||
+                      "—"}
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+          <Badge variant="outline">{admins.length} مسؤول</Badge>
+        </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">لا توجد عناصر.</p>
-      ) : (
-        <ul className="space-y-3">
-          {filtered.map((m: any) => (
-            <li key={m.id} className="rounded-xl border bg-card p-4">
-              <div className="flex items-start justify-between gap-3">
+        {adminsLoading ? (
+          <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {admins.map((a: any) => (
+              <li key={a.user_id} className="flex items-center justify-between gap-3 p-3">
                 <div>
-                  <div className="font-semibold">
-                    {m.name} <span className="text-muted-foreground">— {m.wilaya}</span>
+                  <div className="font-medium">
+                    {a.full_name || a.email || a.user_id}
+                    {a.is_self && (
+                      <Badge variant="secondary" className="ms-2 text-[10px]">
+                        أنت
+                      </Badge>
+                    )}
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    المالك: {m.owner?.full_name || m.owner?.email || m.owner_user_id}
+                  {a.email && a.full_name && (
+                    <div className="text-xs text-muted-foreground">{a.email}</div>
+                  )}
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    منذ {new Date(a.created_at).toLocaleDateString("ar")}
                   </div>
-                  {m.rejection_reason && (
-                    <div className="mt-1 text-xs text-destructive">سبب الرفض: {m.rejection_reason}</div>
-                  )}
                 </div>
-                <Badge
-                  variant="outline"
-                  className={
-                    m.status === "verified"
-                      ? "border-green-500 text-green-600"
-                      : m.status === "rejected"
-                        ? "border-destructive text-destructive"
-                        : "border-amber-500 text-amber-600"
-                  }
-                >
-                  {m.status}
-                </Badge>
-              </div>
-              {m.status === "pending" && (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        await approveFn({ data: { municipality_id: m.id } });
-                        toast.success("تم الاعتماد");
-                        refresh();
-                      } catch (e: any) {
-                        toast.error(e?.message || "فشل الاعتماد");
-                      }
-                    }}
-                  >
-                    اعتماد
-                  </Button>
-                  {reasonFor === m.id ? (
-                    <>
-                      <Input
-                        className="max-w-xs"
-                        placeholder="سبب الرفض"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                      />
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={async () => {
-                          if (reason.trim().length < 3) return toast.error("اذكر سبباً واضحاً");
-                          try {
-                            await rejectFn({
-                              data: { municipality_id: m.id, reason: reason.trim() },
-                            });
-                            toast.success("تم الرفض");
-                            setReasonFor(null);
-                            setReason("");
-                            refresh();
-                          } catch (e: any) {
-                            toast.error(e?.message || "فشل الرفض");
-                          }
-                        }}
-                      >
-                        تأكيد الرفض
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setReasonFor(null)}>
-                        إلغاء
-                      </Button>
-                    </>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={() => setReasonFor(m.id)}>
-                      رفض
-                    </Button>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-xl border bg-card p-5 space-y-3">
+        <h2 className="text-lg font-semibold">ترقية مستخدم</h2>
+        <p className="text-sm text-muted-foreground">
+          أدخل البريد الإلكتروني لمستخدم مسجّل لترقيته إلى مسؤول منصّة.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            className="max-w-sm"
+            type="email"
+            placeholder="user@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={promoting}
+          />
+          <Button onClick={handlePromote} disabled={promoting || !email.trim()}>
+            {promoting ? "جارٍ..." : "ترقية"}
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card p-5 space-y-3">
+        <h2 className="text-lg font-semibold">التخلي عن المسؤولية</h2>
+        <p className="text-sm text-muted-foreground">
+          ستفقد صلاحيات مسؤول المنصّة. لا يمكن لآخر مسؤول التخلي عن دوره.
+        </p>
+        <Button
+          variant="destructive"
+          disabled={selfIsLast || abandoning}
+          onClick={() => setConfirmAbandon(true)}
+        >
+          التخلي عن المسؤولية
+        </Button>
+        {selfIsLast && (
+          <p className="text-xs text-destructive">
+            لا يمكنك التخلي لأنك آخر مسؤول. قم بترقية مستخدم آخر أولاً.
+          </p>
+        )}
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">نقل المسؤولية (اختياري)</summary>
+          <ol className="mt-2 list-decimal ps-5 space-y-1">
+            <li>قم بترقية المستخدم الهدف عبر بريده الإلكتروني.</li>
+            <li>ثم تخلَّ عن مسؤوليتك.</li>
+          </ol>
+        </details>
+      </section>
+
+      <AlertDialog open={confirmAbandon} onOpenChange={setConfirmAbandon}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد التخلي</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم سحب صلاحياتك كمسؤول منصّة. لن تتمكن من الدخول إلى هذه الصفحة بعد ذلك.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={abandoning}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={abandoning}
+              onClick={(e) => {
+                e.preventDefault();
+                handleAbandon();
+              }}
+            >
+              {abandoning ? "جارٍ..." : "تأكيد"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

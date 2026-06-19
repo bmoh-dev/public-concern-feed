@@ -89,10 +89,12 @@ export function AuthenticatedHeader() {
           <Button asChild variant="ghost" size="sm">
             <Link to="/feed">الشكاوى العامة</Link>
           </Button>
-          {role?.isAdmin && (
+          {(role?.municipalities ?? []).some(
+            (m: any) => m.role === "admin" || m.role === "super_admin",
+          ) && (
             <Button asChild variant="ghost" size="sm">
               <Link to="/admin">
-                <LayoutDashboard className="ms-1 h-4 w-4" /> الإدارة
+                <LayoutDashboard className="ms-1 h-4 w-4" /> إدارة البلدية
               </Link>
             </Button>
           )}
@@ -104,9 +106,14 @@ export function AuthenticatedHeader() {
             </Button>
           )}
           {role?.isGlobalAdmin && (
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/platform-admin">البلديات</Link>
-            </Button>
+            <>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/platform-admin">إدارة المنصّة</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/platform-municipalities">اعتماد البلديات</Link>
+              </Button>
+            </>
           )}
           <NotificationsMenu />
           <DropdownMenu>
