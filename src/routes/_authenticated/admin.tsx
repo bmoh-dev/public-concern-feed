@@ -49,6 +49,13 @@ function AdminPage() {
   const listFn = useServerFn(adminListComplaints);
   const metricsFn = useServerFn(adminMetrics);
   const updateFn = useServerFn(adminUpdate);
+  const roleFn = useServerFn(getMyRole);
+
+  const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
+  const adminedMunicipalities = (role?.municipalities ?? []).filter(
+    (m: any) => m.role === "admin" || m.role === "super_admin",
+  );
+  const activeMunicipality = adminedMunicipalities[0] ?? null;
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
