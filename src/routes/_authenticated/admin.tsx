@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminListComplaints, adminMetrics, adminUpdate } from "@/lib/complaints.functions";
+import { getMyRole } from "@/lib/notifications.functions";
 import { requireAdminRoute } from "@/lib/admin-route-guard";
 import { AttachmentGallery } from "@/components/AttachmentGallery";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
@@ -20,19 +21,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES, STATUSES } from "@/lib/i18n";
-import { Download, Search } from "lucide-react";
+import { Building2, Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { RedirectSection, RoutingHistoryList } from "./department";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: ({ location }) => requireAdminRoute(location),
-  head: () => ({ meta: [{ title: "لوحة الإدارة | منصة الشكاوى" }] }),
+  head: () => ({ meta: [{ title: "إدارة البلدية | منصة الشكاوى" }] }),
   component: AdminRouteShell,
   errorComponent: ({ error }) => (
     <div className="p-6 text-destructive">
-      {error.message.includes("admin only")
-        ? "غير مصرح: هذه الصفحة متاحة للمسؤولين فقط"
+      {error.message.includes("ليس لديك") || error.message.includes("admin only")
+        ? "ليس لديك صلاحية إدارة هذه البلدية"
         : `خطأ: ${error.message}`}
     </div>
   ),
