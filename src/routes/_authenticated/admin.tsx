@@ -130,7 +130,18 @@ function AdminPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">لوحة الإدارة</h1>
-          <p className="text-sm text-muted-foreground">إدارة شكاوى المواطنين وتحديث حالاتها.</p>
+          <div className="mt-1 inline-flex items-center gap-2 text-sm">
+            <Building2 className="h-4 w-4 text-primary" />
+            <span className="text-muted-foreground">إدارة البلدية:</span>
+            <span className="font-semibold">
+              {activeMunicipality
+                ? `${activeMunicipality.name} — ${activeMunicipality.wilaya}`
+                : "—"}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            إدارة شكاوى المواطنين وتحديث حالاتها.
+          </p>
         </div>
         <Button asChild variant="outline">
           <Link to="/admin/users">إدارة المستخدمين</Link>
