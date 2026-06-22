@@ -218,7 +218,7 @@ function PlatformAdminPage() {
       </section>
 
       <section className="rounded-xl border bg-card p-5 space-y-3">
-        <h2 className="text-lg font-semibold">ترقية مستخدم</h2>
+        <h2 className="text-lg font-semibold">إضافة مسؤول منصّة</h2>
         <p className="text-sm text-muted-foreground">
           أدخل البريد الإلكتروني لمستخدم مسجّل لترقيته إلى مسؤول منصّة.
         </p>
@@ -238,6 +238,30 @@ function PlatformAdminPage() {
       </section>
 
       <section className="rounded-xl border bg-card p-5 space-y-3">
+        <h2 className="text-lg font-semibold">نقل المسؤولية</h2>
+        <p className="text-sm text-muted-foreground">
+          نقل مسؤولية إدارة المنصّة إلى مسؤول جديد ثم إنهاء صلاحياتي تلقائياً.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            className="max-w-sm"
+            type="email"
+            placeholder="user@example.com"
+            value={transferEmail}
+            onChange={(e) => setTransferEmail(e.target.value)}
+            disabled={transferring}
+          />
+          <Button
+            variant="destructive"
+            onClick={() => setConfirmTransfer(true)}
+            disabled={transferring || !transferEmail.trim()}
+          >
+            {transferring ? "جارٍ..." : "نقل المسؤولية"}
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card p-5 space-y-3">
         <h2 className="text-lg font-semibold">التخلي عن المسؤولية</h2>
         <p className="text-sm text-muted-foreground">
           ستفقد صلاحيات مسؤول المنصّة. لا يمكن لآخر مسؤول التخلي عن دوره.
@@ -251,16 +275,9 @@ function PlatformAdminPage() {
         </Button>
         {selfIsLast && (
           <p className="text-xs text-destructive">
-            لا يمكنك التخلي لأنك آخر مسؤول. قم بترقية مستخدم آخر أولاً.
+            لا يمكنك التخلي لأنك آخر مسؤول. قم بترقية مستخدم آخر أولاً، أو استخدم نقل المسؤولية.
           </p>
         )}
-        <details className="text-xs text-muted-foreground">
-          <summary className="cursor-pointer">نقل المسؤولية (اختياري)</summary>
-          <ol className="mt-2 list-decimal ps-5 space-y-1">
-            <li>قم بترقية المستخدم الهدف عبر بريده الإلكتروني.</li>
-            <li>ثم تخلَّ عن مسؤوليتك.</li>
-          </ol>
-        </details>
       </section>
 
       <AlertDialog open={confirmAbandon} onOpenChange={setConfirmAbandon}>
