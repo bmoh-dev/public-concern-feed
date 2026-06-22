@@ -18,6 +18,7 @@ import {
   markNotificationsRead,
   getMyRole,
 } from "@/lib/notifications.functions";
+import { getPlatformBootstrapState } from "@/lib/platform.functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
