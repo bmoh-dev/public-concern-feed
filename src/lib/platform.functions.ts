@@ -86,6 +86,29 @@ export const abandonGlobalAdmin = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const transferGlobalAdminByEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ email: z.string().email() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertGlobalAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin: any = supabaseAdmin;
+    const { data: prof, error: pErr } = await admin
+      .from("profiles")
+      .select("id, email")
+      .ilike("email", data.email.trim())
+      .maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!prof) throw new Error("لم يتم العثور على المستخدم");
+    if (prof.id === userId) throw new Error("لا يمكن نقل المسؤولية إلى نفسك");
+    const { error } = await (supabase as any).rpc("transfer_global_admin", {
+      target_user: prof.id,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const listGlobalAdmins = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
