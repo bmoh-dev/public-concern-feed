@@ -200,18 +200,15 @@ function PlatformAdminPage() {
               <li key={a.user_id} className="flex items-center justify-between gap-3 p-3">
                 <div>
                   <div className="font-medium">
-                    {a.full_name || a.email || a.user_id}
+                    {a.email || "مستخدم"}
                     {a.is_self && (
                       <Badge variant="secondary" className="ms-2 text-[10px]">
                         أنت
                       </Badge>
                     )}
                   </div>
-                  {a.email && a.full_name && (
-                    <div className="text-xs text-muted-foreground">{a.email}</div>
-                  )}
                   <div className="text-[10px] text-muted-foreground mt-1">
-                    منذ {new Date(a.created_at).toLocaleDateString("ar")}
+                    مسؤول منصّة منذ {new Date(a.created_at).toLocaleDateString("ar")}
                   </div>
                 </div>
               </li>
