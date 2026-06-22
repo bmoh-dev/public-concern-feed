@@ -320,6 +320,29 @@ function PlatformAdminPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={confirmTransfer} onOpenChange={setConfirmTransfer}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد نقل المسؤولية</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم ترقية هذا المستخدم إلى مسؤول منصّة وسيتم سحب صلاحياتك مباشرة بعد التأكيد.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={transferring}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={transferring}
+              onClick={(e) => {
+                e.preventDefault();
+                handleTransfer();
+              }}
+            >
+              {transferring ? "جارٍ..." : "تأكيد النقل"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
