@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,6 +9,7 @@ import {
   listGlobalAdmins,
   promoteGlobalAdminByEmail,
   abandonGlobalAdmin,
+  transferGlobalAdminByEmail,
 } from "@/lib/platform.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +45,13 @@ export const Route = createFileRoute("/_authenticated/platform-admin")({
 
 function PlatformAdminPage() {
   const qc = useQueryClient();
+  const router = useRouter();
   const bootstrapStateFn = useServerFn(getPlatformBootstrapState);
   const bootstrapFn = useServerFn(bootstrapGlobalAdmin);
   const listAdminsFn = useServerFn(listGlobalAdmins);
   const promoteFn = useServerFn(promoteGlobalAdminByEmail);
   const abandonFn = useServerFn(abandonGlobalAdmin);
+  const transferFn = useServerFn(transferGlobalAdminByEmail);
 
   const { data: bootstrapState } = useQuery({
     queryKey: ["platform-bootstrap-state"],
@@ -69,6 +72,9 @@ function PlatformAdminPage() {
   const [promoting, setPromoting] = useState(false);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [abandoning, setAbandoning] = useState(false);
+  const [transferEmail, setTransferEmail] = useState("");
+  const [confirmTransfer, setConfirmTransfer] = useState(false);
+  const [transferring, setTransferring] = useState(false);
 
   if (needsBootstrap) {
     return (
@@ -150,6 +156,24 @@ function PlatformAdminPage() {
     }
   };
 
+  const handleTransfer = async () => {
+    const value = transferEmail.trim();
+    if (!value) return toast.error("أدخل بريداً إلكترونياً");
+    setTransferring(true);
+    try {
+      await transferFn({ data: { email: value } });
+      toast.success("تم نقل المسؤولية");
+      setConfirmTransfer(false);
+      setTransferEmail("");
+      await qc.invalidateQueries();
+      router.navigate({ to: "/my-complaints" });
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر نقل المسؤولية");
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -194,18 +218,15 @@ function PlatformAdminPage() {
               <li key={a.user_id} className="flex items-center justify-between gap-3 p-3">
                 <div>
                   <div className="font-medium">
-                    {a.full_name || a.email || a.user_id}
+                    {a.email || "مستخدم"}
                     {a.is_self && (
                       <Badge variant="secondary" className="ms-2 text-[10px]">
                         أنت
                       </Badge>
                     )}
                   </div>
-                  {a.email && a.full_name && (
-                    <div className="text-xs text-muted-foreground">{a.email}</div>
-                  )}
                   <div className="text-[10px] text-muted-foreground mt-1">
-                    منذ {new Date(a.created_at).toLocaleDateString("ar")}
+                    مسؤول منصّة منذ {new Date(a.created_at).toLocaleDateString("ar")}
                   </div>
                 </div>
               </li>
@@ -215,7 +236,7 @@ function PlatformAdminPage() {
       </section>
 
       <section className="rounded-xl border bg-card p-5 space-y-3">
-        <h2 className="text-lg font-semibold">ترقية مستخدم</h2>
+        <h2 className="text-lg font-semibold">إضافة مسؤول منصّة</h2>
         <p className="text-sm text-muted-foreground">
           أدخل البريد الإلكتروني لمستخدم مسجّل لترقيته إلى مسؤول منصّة.
         </p>
@@ -235,6 +256,30 @@ function PlatformAdminPage() {
       </section>
 
       <section className="rounded-xl border bg-card p-5 space-y-3">
+        <h2 className="text-lg font-semibold">نقل المسؤولية</h2>
+        <p className="text-sm text-muted-foreground">
+          نقل مسؤولية إدارة المنصّة إلى مسؤول جديد ثم إنهاء صلاحياتي تلقائياً.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            className="max-w-sm"
+            type="email"
+            placeholder="user@example.com"
+            value={transferEmail}
+            onChange={(e) => setTransferEmail(e.target.value)}
+            disabled={transferring}
+          />
+          <Button
+            variant="destructive"
+            onClick={() => setConfirmTransfer(true)}
+            disabled={transferring || !transferEmail.trim()}
+          >
+            {transferring ? "جارٍ..." : "نقل المسؤولية"}
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card p-5 space-y-3">
         <h2 className="text-lg font-semibold">التخلي عن المسؤولية</h2>
         <p className="text-sm text-muted-foreground">
           ستفقد صلاحيات مسؤول المنصّة. لا يمكن لآخر مسؤول التخلي عن دوره.
@@ -248,16 +293,9 @@ function PlatformAdminPage() {
         </Button>
         {selfIsLast && (
           <p className="text-xs text-destructive">
-            لا يمكنك التخلي لأنك آخر مسؤول. قم بترقية مستخدم آخر أولاً.
+            لا يمكنك التخلي لأنك آخر مسؤول. قم بترقية مستخدم آخر أولاً، أو استخدم نقل المسؤولية.
           </p>
         )}
-        <details className="text-xs text-muted-foreground">
-          <summary className="cursor-pointer">نقل المسؤولية (اختياري)</summary>
-          <ol className="mt-2 list-decimal ps-5 space-y-1">
-            <li>قم بترقية المستخدم الهدف عبر بريده الإلكتروني.</li>
-            <li>ثم تخلَّ عن مسؤوليتك.</li>
-          </ol>
-        </details>
       </section>
 
       <AlertDialog open={confirmAbandon} onOpenChange={setConfirmAbandon}>
@@ -278,6 +316,29 @@ function PlatformAdminPage() {
               }}
             >
               {abandoning ? "جارٍ..." : "تأكيد"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmTransfer} onOpenChange={setConfirmTransfer}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد نقل المسؤولية</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم ترقية هذا المستخدم إلى مسؤول منصّة وسيتم سحب صلاحياتك مباشرة بعد التأكيد.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={transferring}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={transferring}
+              onClick={(e) => {
+                e.preventDefault();
+                handleTransfer();
+              }}
+            >
+              {transferring ? "جارٍ..." : "تأكيد النقل"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
