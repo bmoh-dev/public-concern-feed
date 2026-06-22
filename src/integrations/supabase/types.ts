@@ -475,6 +475,10 @@ export type Database = {
         Args: { target_user: string }
         Returns: undefined
       }
+      transfer_global_admin: {
+        Args: { target_user: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "citizen" | "admin" | "super_admin" | "global_admin"
