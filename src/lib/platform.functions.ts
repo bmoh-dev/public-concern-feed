@@ -125,39 +125,58 @@ export const listGlobalAdmins = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
 
     const ids = (rows ?? []).map((r: any) => r.user_id);
-    let profilesById: Record<string, { full_name: string | null; email: string | null }> = {};
-    if (ids.length) {
-      const { data: profs } = await admin
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", ids);
-      for (const p of profs ?? []) {
-        profilesById[p.id] = { full_name: p.full_name, email: p.email };
-      }
-    }
+    const idsToResolve = new Set<string>(ids);
 
     const { data: settings } = await admin
       .from("platform_settings")
       .select("initialized_at, initialized_by")
       .eq("id", true)
       .maybeSingle();
+    if (settings?.initialized_by) idsToResolve.add(settings.initialized_by);
 
-    let initializer: { full_name: string | null; email: string | null } | null = null;
-    if (settings?.initialized_by) {
-      const { data: initProf } = await admin
+    const identityById: Record<string, { full_name: string | null; email: string | null }> = {};
+
+    if (idsToResolve.size) {
+      const { data: profs } = await admin
         .from("profiles")
         .select("id, full_name, email")
-        .eq("id", settings.initialized_by)
-        .maybeSingle();
-      if (initProf) initializer = { full_name: initProf.full_name, email: initProf.email };
+        .in("id", Array.from(idsToResolve));
+      for (const p of profs ?? []) {
+        identityById[p.id] = { full_name: p.full_name, email: p.email };
+      }
+      // Fallback to auth.users metadata for missing fields
+      await Promise.all(
+        Array.from(idsToResolve).map(async (uid) => {
+          const current = identityById[uid] ?? { full_name: null, email: null };
+          if (current.full_name && current.email) {
+            identityById[uid] = current;
+            return;
+          }
+          try {
+            const { data: u } = await admin.auth.admin.getUserById(uid);
+            const meta = (u?.user?.user_metadata ?? {}) as any;
+            identityById[uid] = {
+              full_name:
+                current.full_name ?? meta.full_name ?? meta.name ?? null,
+              email: current.email ?? u?.user?.email ?? null,
+            };
+          } catch {
+            identityById[uid] = current;
+          }
+        }),
+      );
     }
+
+    const initializer = settings?.initialized_by
+      ? identityById[settings.initialized_by] ?? null
+      : null;
 
     return {
       admins: (rows ?? []).map((r: any) => ({
         user_id: r.user_id,
         created_at: r.created_at,
-        full_name: profilesById[r.user_id]?.full_name ?? null,
-        email: profilesById[r.user_id]?.email ?? null,
+        full_name: identityById[r.user_id]?.full_name ?? null,
+        email: identityById[r.user_id]?.email ?? null,
         is_self: r.user_id === userId,
       })),
       initialized_at: settings?.initialized_at ?? null,

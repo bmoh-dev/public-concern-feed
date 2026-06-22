@@ -214,23 +214,30 @@ function PlatformAdminPage() {
           <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>
         ) : (
           <ul className="divide-y rounded-lg border">
-            {admins.map((a: any) => (
-              <li key={a.user_id} className="flex items-center justify-between gap-3 p-3">
-                <div>
-                  <div className="font-medium">
-                    {a.email || "مستخدم"}
-                    {a.is_self && (
-                      <Badge variant="secondary" className="ms-2 text-[10px]">
-                        أنت
-                      </Badge>
+            {admins.map((a: any) => {
+              const displayName = a.full_name || a.email || "مستخدم";
+              const showEmail = a.email && a.email !== displayName;
+              return (
+                <li key={a.user_id} className="flex items-center justify-between gap-3 p-3">
+                  <div>
+                    <div className="font-medium">
+                      {displayName}
+                      {a.is_self && (
+                        <Badge variant="secondary" className="ms-2 text-[10px]">
+                          أنت
+                        </Badge>
+                      )}
+                    </div>
+                    {showEmail && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{a.email}</div>
                     )}
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      مسؤول منصّة منذ {new Date(a.created_at).toLocaleDateString("ar")}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground mt-1">
-                    مسؤول منصّة منذ {new Date(a.created_at).toLocaleDateString("ar")}
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
