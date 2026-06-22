@@ -156,6 +156,24 @@ function PlatformAdminPage() {
     }
   };
 
+  const handleTransfer = async () => {
+    const value = transferEmail.trim();
+    if (!value) return toast.error("أدخل بريداً إلكترونياً");
+    setTransferring(true);
+    try {
+      await transferFn({ data: { email: value } });
+      toast.success("تم نقل المسؤولية");
+      setConfirmTransfer(false);
+      setTransferEmail("");
+      await qc.invalidateQueries();
+      router.navigate({ to: "/my-complaints" });
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر نقل المسؤولية");
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
