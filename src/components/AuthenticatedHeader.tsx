@@ -18,6 +18,7 @@ import {
   markNotificationsRead,
   getMyRole,
 } from "@/lib/notifications.functions";
+import { getPlatformBootstrapState } from "@/lib/platform.functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +68,13 @@ export function AuthenticatedHeader() {
 
   const roleFn = useServerFn(getMyRole);
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
+  const bootstrapFn = useServerFn(getPlatformBootstrapState);
+  const { data: bootstrapState } = useQuery({
+    queryKey: ["platform-bootstrap-state"],
+    queryFn: () => bootstrapFn(),
+  });
+  const needsBootstrap = bootstrapState ? !bootstrapState.hasGlobalAdmin : false;
+  const showPlatformLink = role?.isGlobalAdmin || needsBootstrap;
 
   return (
     <header className="sticky top-0 z-10 border-b bg-card/90 backdrop-blur">
@@ -105,15 +113,15 @@ export function AuthenticatedHeader() {
               </Link>
             </Button>
           )}
+          {showPlatformLink && (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/platform-admin">إدارة المنصّة</Link>
+            </Button>
+          )}
           {role?.isGlobalAdmin && (
-            <>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/platform-admin">إدارة المنصّة</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/platform-municipalities">اعتماد البلديات</Link>
-              </Button>
-            </>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/platform-municipalities">اعتماد البلديات</Link>
+            </Button>
           )}
           <NotificationsMenu />
           <DropdownMenu>
