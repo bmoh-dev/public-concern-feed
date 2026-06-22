@@ -45,11 +45,13 @@ export const Route = createFileRoute("/_authenticated/platform-admin")({
 
 function PlatformAdminPage() {
   const qc = useQueryClient();
+  const router = useRouter();
   const bootstrapStateFn = useServerFn(getPlatformBootstrapState);
   const bootstrapFn = useServerFn(bootstrapGlobalAdmin);
   const listAdminsFn = useServerFn(listGlobalAdmins);
   const promoteFn = useServerFn(promoteGlobalAdminByEmail);
   const abandonFn = useServerFn(abandonGlobalAdmin);
+  const transferFn = useServerFn(transferGlobalAdminByEmail);
 
   const { data: bootstrapState } = useQuery({
     queryKey: ["platform-bootstrap-state"],
@@ -70,6 +72,9 @@ function PlatformAdminPage() {
   const [promoting, setPromoting] = useState(false);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [abandoning, setAbandoning] = useState(false);
+  const [transferEmail, setTransferEmail] = useState("");
+  const [confirmTransfer, setConfirmTransfer] = useState(false);
+  const [transferring, setTransferring] = useState(false);
 
   if (needsBootstrap) {
     return (
