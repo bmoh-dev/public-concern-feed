@@ -291,7 +291,7 @@ function SubmitPage() {
             <Link to="/onboarding">الانضمام إلى بلدية</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/onboarding">إنشاء بلدية</Link>
+            <Link to="/onboarding" search={{ mode: "create" }}>إنشاء بلدية</Link>
           </Button>
         </div>
       </div>
