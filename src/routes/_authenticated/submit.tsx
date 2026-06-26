@@ -55,7 +55,7 @@ function SubmitPage() {
   const navigate = useNavigate();
   const submitFn = useServerFn(submitComplaint);
   const stateFn = useServerFn(getMyOnboardingState);
-  const { data: state, isLoading: stateLoading } = useQuery({
+  const { data: state, isLoading: stateLoading, refetch: refetchState } = useQuery({
     queryKey: ["onboarding"],
     queryFn: () => stateFn(),
   });
