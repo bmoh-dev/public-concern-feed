@@ -16,6 +16,9 @@ import { Building2, Plus, Check, Clock, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({ meta: [{ title: "اختر بلديتك | منصة الشكاوى" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "create" ? ("create" as const) : undefined,
+  }),
   component: OnboardingPage,
 });
 
@@ -33,16 +36,13 @@ function OnboardingPage() {
     queryFn: () => listFn(),
   });
 
-  const [mode, setMode] = useState<"choose" | "create">("choose");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<"choose" | "create">(
+    search.mode === "create" ? "create" : "choose",
+  );
   const [name, setName] = useState("");
   const [wilaya, setWilaya] = useState("");
   const [busy, setBusy] = useState(false);
-
-  // Global admins skip onboarding entirely
-  if (state?.isGlobalAdmin) {
-    navigate({ to: "/platform-admin", replace: true });
-    return null;
-  }
 
   // If user already has a membership, kick to home
   if (state && state.municipalities.length > 0) {

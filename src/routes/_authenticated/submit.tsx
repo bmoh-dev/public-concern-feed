@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { getMyOnboardingState } from "@/lib/municipalities.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,12 +53,18 @@ export function clearAllComplaintDrafts() {
 
 function SubmitPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const submitFn = useServerFn(submitComplaint);
   const stateFn = useServerFn(getMyOnboardingState);
-  const { data: state, isLoading: stateLoading, refetch: refetchState } = useQuery({
+  const { data: state, isLoading: stateLoading, refetch: refetchState, isFetching: stateFetching } = useQuery({
     queryKey: ["onboarding"],
     queryFn: () => stateFn(),
   });
+  const handleRefresh = async () => {
+    await qc.invalidateQueries({ queryKey: ["onboarding"] });
+    await qc.invalidateQueries({ queryKey: ["verified-municipalities"] });
+    await refetchState();
+  };
   const [userId, setUserId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [title, setTitle] = useState("");
@@ -262,10 +268,10 @@ function SubmitPage() {
         </p>
         <div className="mt-4 flex justify-center gap-2">
           <Button asChild>
-            <Link to="/onboarding">إنشاء بلدية</Link>
+            <Link to="/onboarding" search={{ mode: "create" }}>إنشاء بلدية</Link>
           </Button>
-          <Button variant="outline" onClick={() => refetchState()}>
-            تحديث
+          <Button variant="outline" onClick={handleRefresh} disabled={stateFetching}>
+            {stateFetching ? "جارٍ التحديث..." : "تحديث"}
           </Button>
         </div>
       </div>
@@ -285,7 +291,7 @@ function SubmitPage() {
             <Link to="/onboarding">الانضمام إلى بلدية</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/onboarding">إنشاء بلدية</Link>
+            <Link to="/onboarding" search={{ mode: "create" }}>إنشاء بلدية</Link>
           </Button>
         </div>
       </div>
