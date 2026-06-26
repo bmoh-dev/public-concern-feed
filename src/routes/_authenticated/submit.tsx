@@ -268,10 +268,10 @@ function SubmitPage() {
         </p>
         <div className="mt-4 flex justify-center gap-2">
           <Button asChild>
-            <Link to="/onboarding">إنشاء بلدية</Link>
+            <Link to="/onboarding" search={{ mode: "create" }}>إنشاء بلدية</Link>
           </Button>
-          <Button variant="outline" onClick={() => refetchState()}>
-            تحديث
+          <Button variant="outline" onClick={handleRefresh} disabled={stateFetching}>
+            {stateFetching ? "جارٍ التحديث..." : "تحديث"}
           </Button>
         </div>
       </div>
