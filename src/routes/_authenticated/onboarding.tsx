@@ -16,6 +16,9 @@ import { Building2, Plus, Check, Clock, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({ meta: [{ title: "اختر بلديتك | منصة الشكاوى" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "create" ? ("create" as const) : undefined,
+  }),
   component: OnboardingPage,
 });
 
