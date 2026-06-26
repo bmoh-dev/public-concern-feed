@@ -53,12 +53,18 @@ export function clearAllComplaintDrafts() {
 
 function SubmitPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const submitFn = useServerFn(submitComplaint);
   const stateFn = useServerFn(getMyOnboardingState);
-  const { data: state, isLoading: stateLoading, refetch: refetchState } = useQuery({
+  const { data: state, isLoading: stateLoading, refetch: refetchState, isFetching: stateFetching } = useQuery({
     queryKey: ["onboarding"],
     queryFn: () => stateFn(),
   });
+  const handleRefresh = async () => {
+    await qc.invalidateQueries({ queryKey: ["onboarding"] });
+    await qc.invalidateQueries({ queryKey: ["verified-municipalities"] });
+    await refetchState();
+  };
   const [userId, setUserId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [title, setTitle] = useState("");
