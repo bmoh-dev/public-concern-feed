@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { getMyOnboardingState } from "@/lib/municipalities.functions";
 import { supabase } from "@/integrations/supabase/client";
