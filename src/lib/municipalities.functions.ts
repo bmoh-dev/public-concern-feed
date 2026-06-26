@@ -32,7 +32,7 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
     const { userId } = context;
     const admin: any = supabaseAdmin;
 
-    const [{ data: memberships }, { data: pending }, { data: roles }] = await Promise.all([
+    const [{ data: memberships }, { data: pending }, { data: roles }, { count: verifiedCount }] = await Promise.all([
       admin
         .from("municipality_members")
         .select("municipality_id, role, joined_at, municipalities:municipality_id(id,name,wilaya,status)")
@@ -44,6 +44,10 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
         .eq("owner_user_id", userId)
         .in("status", ["pending", "rejected"]),
       admin.from("user_roles").select("role").eq("user_id", userId),
+      admin
+        .from("municipalities")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "verified"),
     ]);
 
     const isGlobalAdmin = (roles ?? []).some((r: any) => r.role === "global_admin");
@@ -61,6 +65,7 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
       isGlobalAdmin,
       municipalities: list,
       currentMunicipalityId: list[0]?.id ?? null,
+      verifiedMunicipalityCount: verifiedCount ?? 0,
       pendingOwned: (pending ?? []).map((p: any) => ({
         id: p.id,
         name: p.name,

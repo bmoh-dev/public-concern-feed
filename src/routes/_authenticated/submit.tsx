@@ -55,7 +55,7 @@ function SubmitPage() {
   const navigate = useNavigate();
   const submitFn = useServerFn(submitComplaint);
   const stateFn = useServerFn(getMyOnboardingState);
-  const { data: state, isLoading: stateLoading } = useQuery({
+  const { data: state, isLoading: stateLoading, refetch: refetchState } = useQuery({
     queryKey: ["onboarding"],
     queryFn: () => stateFn(),
   });
@@ -252,16 +252,42 @@ function SubmitPage() {
     return <div className="text-sm text-muted-foreground">جارٍ التحميل...</div>;
   }
 
+  // Case 1 — No verified municipalities exist on the platform
+  if ((state?.verifiedMunicipalityCount ?? 0) === 0 && !state?.isGlobalAdmin) {
+    return (
+      <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 text-center">
+        <h1 className="text-xl font-bold">لا توجد أي بلديات معتمدة حالياً.</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          لا يمكن إرسال الشكاوى حتى يتم اعتماد أول بلدية على المنصة.
+        </p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button asChild>
+            <Link to="/onboarding">إنشاء بلدية</Link>
+          </Button>
+          <Button variant="outline" onClick={() => refetchState()}>
+            تحديث
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Case 2 — Verified municipalities exist, but user has no membership
   if (municipalities.length === 0 && !state?.isGlobalAdmin) {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 text-center">
-        <h1 className="text-xl font-bold">لا توجد بلدية مرتبطة بحسابك</h1>
+        <h1 className="text-xl font-bold">يجب الانضمام إلى بلدية</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           يجب الانضمام إلى بلدية موثّقة قبل تقديم الشكاوى.
         </p>
-        <Button asChild className="mt-4">
-          <Link to="/onboarding">اختيار بلدية</Link>
-        </Button>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button asChild>
+            <Link to="/onboarding">الانضمام إلى بلدية</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/onboarding">إنشاء بلدية</Link>
+          </Button>
+        </div>
       </div>
     );
   }
