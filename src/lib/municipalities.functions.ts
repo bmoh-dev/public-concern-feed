@@ -65,6 +65,7 @@ export const getMyOnboardingState = createServerFn({ method: "GET" })
       isGlobalAdmin,
       municipalities: list,
       currentMunicipalityId: list[0]?.id ?? null,
+      verifiedMunicipalityCount: verifiedCount ?? 0,
       pendingOwned: (pending ?? []).map((p: any) => ({
         id: p.id,
         name: p.name,
