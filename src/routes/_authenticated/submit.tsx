@@ -253,7 +253,7 @@ function SubmitPage() {
   }
 
   // Case 1 — No verified municipalities exist on the platform
-  if ((state?.verifiedMunicipalityCount ?? 0) === 0 && !state?.isGlobalAdmin) {
+  if ((state?.verifiedMunicipalityCount ?? 0) === 0) {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 text-center">
         <h1 className="text-xl font-bold">لا توجد أي بلديات معتمدة حالياً.</h1>
