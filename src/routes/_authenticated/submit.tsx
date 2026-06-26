@@ -273,7 +273,7 @@ function SubmitPage() {
   }
 
   // Case 2 — Verified municipalities exist, but user has no membership
-  if (municipalities.length === 0 && !state?.isGlobalAdmin) {
+  if (municipalities.length === 0) {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 text-center">
         <h1 className="text-xl font-bold">يجب الانضمام إلى بلدية</h1>
