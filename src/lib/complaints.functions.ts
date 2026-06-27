@@ -223,27 +223,37 @@ export const adminListComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    const muniIds = await assertMunicipalityAdmin(context.userId);
     let q = supabaseAdmin
       .from("complaints")
       .select(
-        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, municipality_id, attachments(id, storage_path, file_name, mime_type)",
       )
+      .in("municipality_id", muniIds)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
     if (data.category) q = q.eq("category", data.category);
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
     if (data.search) {
-      const s = data.search;
-      const uuid = /^[0-9a-f-]{36}$/i.test(s) ? s : "00000000-0000-0000-0000-000000000000";
-      q = q.or(
-        `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
-      );
+      const s = sanitizeSearchTerm(data.search);
+      const uuid = /^[0-9a-f-]{36}$/i.test(data.search.trim())
+        ? data.search.trim()
+        : "00000000-0000-0000-0000-000000000000";
+      if (s) {
+        q = q.or(
+          `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
+        );
+      } else {
+        q = q.eq("id", uuid);
+      }
     }
 
     const { data: rows, error } = await q.limit(500);
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[adminListComplaints]", error);
+      throw new Error("تعذّر تحميل الشكاوى");
+    }
     const userIds = Array.from(new Set((rows ?? []).map((r) => r.user_id)));
     let profilesMap = new Map<string, { full_name: string | null; email: string | null }>();
     if (userIds.length) {
