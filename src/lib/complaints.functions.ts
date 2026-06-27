@@ -208,6 +208,8 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.category) q = q.eq("category", data.category);
     if (data.search) {
+      // Per-IP search rate limit for the anonymous public feed.
+      await enforceRateLimit({ ...RATE_LIMITS.searchPerMinute });
       const s = sanitizeSearchTerm(data.search);
       if (s) q = q.ilike("title", `%${s}%`);
     }
