@@ -172,24 +172,63 @@ function SubmitPage() {
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return;
-    const remaining = MAX_FILES - uploads.length;
-    const arr = Array.from(files).slice(0, remaining);
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
 
-    for (const file of arr) {
-      if (file.size > MAX_SIZE) {
-        toast.error(`الملف ${file.name} يتجاوز 8MB`);
+    // Dedup against already-selected files (same name+size+lastModified).
+    const existingKeys = new Set(uploads.map((it) => fileDedupKey(it.file)));
+    const incoming = Array.from(files).filter((f) => {
+      const k = fileDedupKey(f);
+      if (existingKeys.has(k)) return false;
+      existingKeys.add(k);
+      return true;
+    });
+
+    for (const file of incoming) {
+      // Per-file mime/size validation
+      const meta = { mime_type: file.type, size_bytes: file.size, file_name: file.name };
+      const fileErr = validateSingleFile(meta);
+      if (fileErr) {
+        toast.error(fileErr);
         continue;
       }
-      const preview = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
-      const item: UploadItem = { file, preview, progress: 0 };
+
+      // Aggregate caps (images / pdfs / total) — simulate adding this file
+      const projected = [
+        ...uploads.map((it) => ({
+          mime_type: it.file.type,
+          size_bytes: it.file.size,
+          file_name: it.file.name,
+        })),
+        meta,
+      ];
+      const setErr = validateAttachmentSet(projected);
+      if (setErr) {
+        toast.error(setErr);
+        break;
+      }
+
+      const preview = isImageMime(file.type) ? URL.createObjectURL(file) : undefined;
+      const item: UploadItem = { file, preview, progress: 5 };
       setUploads((prev) => [...prev, item]);
 
       const path = `${u.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+
+      // Show indeterminate progress while uploading
+      const tick = setInterval(() => {
+        setUploads((prev) =>
+          prev.map((it) =>
+            it.file === file && !it.storage_path && !it.error
+              ? { ...it, progress: Math.min(90, it.progress + 7) }
+              : it,
+          ),
+        );
+      }, 250);
+
       const { error } = await supabase.storage
         .from("complaint-attachments")
         .upload(path, file, { contentType: file.type, upsert: false });
+      clearInterval(tick);
       setUploads((prev) =>
         prev.map((it) =>
           it.file === file
