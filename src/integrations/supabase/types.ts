@@ -449,28 +449,6 @@ export type Database = {
     Functions: {
       abandon_global_admin: { Args: never; Returns: undefined }
       bootstrap_global_admin: { Args: never; Returns: undefined }
-      get_user_department: { Args: { _user_id: string }; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_department_admin: { Args: { _user_id: string }; Returns: boolean }
-      is_global_admin: { Args: { _user_id: string }; Returns: boolean }
-      is_municipality_admin: {
-        Args: { _municipality_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_municipality_member: {
-        Args: { _municipality_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_municipality_super_admin: {
-        Args: { _municipality_id: string; _user_id: string }
-        Returns: boolean
-      }
       promote_global_admin: {
         Args: { target_user: string }
         Returns: undefined
