@@ -272,9 +272,15 @@ export const adminListComplaints = createServerFn({ method: "POST" })
 export const adminMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const { data, error } = await supabaseAdmin.from("complaints").select("status");
-    if (error) throw new Error(error.message);
+    const muniIds = await assertMunicipalityAdmin(context.userId);
+    const { data, error } = await supabaseAdmin
+      .from("complaints")
+      .select("status")
+      .in("municipality_id", muniIds);
+    if (error) {
+      console.error("[adminMetrics]", error);
+      throw new Error("تعذّر تحميل الإحصائيات");
+    }
     const total = data.length;
     const pending = data.filter((r) => r.status === "pending").length;
     const in_progress = data.filter((r) => r.status === "in_progress").length;
