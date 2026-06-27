@@ -498,16 +498,28 @@ export type Database = {
         Args: { target_user: string }
         Returns: undefined
       }
-      rl_check_and_consume: {
-        Args: {
-          p_action: string
-          p_max: number
-          p_subject: string
-          p_user?: string
-          p_window_seconds: number
-        }
-        Returns: Json
-      }
+      rl_check_and_consume:
+        | {
+            Args: {
+              p_action: string
+              p_max: number
+              p_subject: string
+              p_user?: string
+              p_window_seconds: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_action: string
+              p_amount?: number
+              p_max: number
+              p_subject: string
+              p_user?: string
+              p_window_seconds: number
+            }
+            Returns: Json
+          }
       rl_cleanup_old: { Args: never; Returns: undefined }
       transfer_global_admin: {
         Args: { target_user: string }
