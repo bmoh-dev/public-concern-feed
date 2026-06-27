@@ -394,6 +394,51 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_blocks_log: {
+        Row: {
+          action: string
+          blocked_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          blocked_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          blocked_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      rate_limit_counters: {
+        Row: {
+          action: string
+          count: number
+          subject: string
+          window_seconds: number
+          window_start: string
+        }
+        Insert: {
+          action: string
+          count?: number
+          subject: string
+          window_seconds: number
+          window_start: string
+        }
+        Update: {
+          action?: string
+          count?: number
+          subject?: string
+          window_seconds?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
       role_audit_log: {
         Row: {
           actor_admin_id: string
@@ -453,6 +498,17 @@ export type Database = {
         Args: { target_user: string }
         Returns: undefined
       }
+      rl_check_and_consume: {
+        Args: {
+          p_action: string
+          p_max: number
+          p_subject: string
+          p_user?: string
+          p_window_seconds: number
+        }
+        Returns: Json
+      }
+      rl_cleanup_old: { Args: never; Returns: undefined }
       transfer_global_admin: {
         Args: { target_user: string }
         Returns: undefined
