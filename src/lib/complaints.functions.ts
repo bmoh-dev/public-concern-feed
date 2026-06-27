@@ -243,6 +243,9 @@ export const adminListComplaints = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const muniIds = await assertMunicipalityAdmin(context.userId);
+    if (data.search) {
+      await enforceRateLimit({ ...RATE_LIMITS.searchPerMinute, userId: context.userId });
+    }
     let q = supabaseAdmin
       .from("complaints")
       .select(
