@@ -21,14 +21,22 @@ import { CATEGORY_LABELS, CATEGORIES } from "@/lib/i18n";
 import { toast } from "sonner";
 import { X, Upload, MapPin } from "lucide-react";
 import { MapPicker } from "@/components/MapPicker";
+import {
+  ALLOWED_MIME,
+  MAX_ATTACHMENTS_TOTAL,
+  MAX_IMAGES_PER_COMPLAINT,
+  MAX_PDFS_PER_COMPLAINT,
+  validateSingleFile,
+  validateAttachmentSet,
+  isImageMime,
+  isPdfMime,
+  fileDedupKey,
+} from "@/lib/upload-validation";
 
 export const Route = createFileRoute("/_authenticated/submit")({
   head: () => ({ meta: [{ title: "شكوى جديدة | منصة الشكاوى" }] }),
   component: SubmitPage,
 });
-
-const MAX_FILES = 5;
-const MAX_SIZE = 8 * 1024 * 1024;
 
 type UploadItem = {
   file: File;
