@@ -7,7 +7,7 @@ import {
   sanitizeSearchTerm,
 } from "@/lib/authz.server";
 import { getPublicSupabaseClient } from "@/lib/supabase-public.server";
-import { enforceRateLimit, enforceRateLimits } from "@/lib/rate-limit.server";
+import { enforceRateLimit, enforceRateLimits, enforceUploadBandwidth } from "@/lib/rate-limit.server";
 import { RATE_LIMITS } from "@/lib/rate-limits";
 import {
   ALLOWED_MIME,
@@ -136,6 +136,13 @@ export const submitComplaint = createServerFn({ method: "POST" })
         console.error("[submitComplaint] attachments insert error", aErr);
         throw new Error(aErr.message);
       }
+      // Bandwidth accounting: only count files we just persisted successfully.
+      const totalBytes = data.attachments.reduce((sum, a) => sum + (a.size_bytes ?? 0), 0);
+      await enforceUploadBandwidth({
+        userId,
+        bytes: totalBytes,
+        policy: RATE_LIMITS.uploadBandwidthHour,
+      });
     }
     return { id: complaint.id };
   });
