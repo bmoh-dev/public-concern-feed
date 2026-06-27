@@ -94,6 +94,10 @@ export const createMunicipality = createServerFn({ method: "POST" })
     const { userId } = context;
     const admin: any = supabaseAdmin;
 
+    // Max 3 municipality creation attempts per 24h.
+    await enforceRateLimit({ ...RATE_LIMITS.municipalityCreateDay, userId });
+
+
     // Uniqueness check (case-insensitive) — also enforced by index
     const { data: existing } = await admin
       .from("municipalities")
