@@ -3,53 +3,71 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { signAttachments } from "@/lib/complaints.functions";
+import {
+  AuthzError,
+  getAdminMunicipalityIds,
+  getMyDepartmentInfo,
+  sanitizeSearchTerm,
+} from "@/lib/authz.server";
 
-const admin = supabaseAdmin as any;
+const admin: any = supabaseAdmin;
 
-
-async function isGeneralAdmin(userId: string): Promise<boolean> {
-  const { data } = await admin
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .in("role", ["admin", "super_admin", "global_admin"]);
-  return !!(data && data.length > 0);
-}
-
-async function assertGeneralAdmin(userId: string) {
-  const ok = await isGeneralAdmin(userId);
-  if (!ok) throw new Error("Forbidden: general admin only");
-}
-
-async function getMyDepartmentId(userId: string): Promise<string | null> {
-  const { data } = await admin
-    .from("department_admins")
-    .select("department_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data?.department_id ?? null;
+/**
+ * Department admin context.
+ * Each department admin is bound to exactly one department, which belongs to
+ * exactly one municipality. Municipality admins (admin/super_admin) may also
+ * act on departments in the municipalities they administer.
+ */
+async function resolveActorScope(userId: string): Promise<{
+  departmentId: string | null;
+  municipalityIds: string[];
+}> {
+  const [dept, muniIds] = await Promise.all([
+    getMyDepartmentInfo(userId),
+    getAdminMunicipalityIds(userId),
+  ]);
+  const munis = new Set<string>(muniIds);
+  if (dept?.municipality_id) munis.add(dept.municipality_id);
+  return { departmentId: dept?.department_id ?? null, municipalityIds: Array.from(munis) };
 }
 
 export const listDepartments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
-    const { data, error } = await admin
+  .inputValidator((input) =>
+    z
+      .object({ municipality_id: z.string().uuid().optional() })
+      .partial()
+      .optional()
+      .transform((v) => v ?? {})
+      .parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { municipalityIds } = await resolveActorScope(context.userId);
+    if (!municipalityIds.length) throw new AuthzError();
+    const target = data.municipality_id;
+    const muniFilter =
+      target && municipalityIds.includes(target) ? [target] : municipalityIds;
+    const { data: rows, error } = await admin
       .from("departments")
-      .select("id, slug, name_ar")
+      .select("id, slug, name_ar, municipality_id")
+      .in("municipality_id", muniFilter)
       .order("name_ar");
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    if (error) {
+      console.error("[listDepartments]", error);
+      throw new Error("تعذّر تحميل الأقسام");
+    }
+    return rows ?? [];
   });
 
 export const getMyDepartment = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const deptId = await getMyDepartmentId(context.userId);
-    if (!deptId) return null;
+    const info = await getMyDepartmentInfo(context.userId);
+    if (!info) return null;
     const { data } = await admin
       .from("departments")
-      .select("id, slug, name_ar")
-      .eq("id", deptId)
+      .select("id, slug, name_ar, municipality_id")
+      .eq("id", info.department_id)
       .maybeSingle();
     return data;
   });
@@ -65,26 +83,37 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const deptId = await getMyDepartmentId(context.userId);
-    if (!deptId) throw new Error("Forbidden: department admin only");
+    const info = await getMyDepartmentInfo(context.userId);
+    if (!info) throw new AuthzError();
+
     let q = admin
       .from("complaints")
       .select(
-        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, municipality_id, attachments(id, storage_path, file_name, mime_type)",
       )
-      .eq("assigned_department_id", deptId)
+      .eq("assigned_department_id", info.department_id)
+      // Defense in depth: department belongs to one municipality.
+      .eq("municipality_id", info.municipality_id)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
     if (data.search) {
-      const s = data.search;
-      const uuid = /^[0-9a-f-]{36}$/i.test(s) ? s : "00000000-0000-0000-0000-000000000000";
-      q = q.or(
-        `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
-      );
+      const s = sanitizeSearchTerm(data.search);
+      const uuid = /^[0-9a-f-]{36}$/i.test(data.search.trim())
+        ? data.search.trim()
+        : "00000000-0000-0000-0000-000000000000";
+      if (s) {
+        q = q.or(
+          `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
+        );
+      } else {
+        q = q.eq("id", uuid);
+      }
     }
     const { data: rows, error } = await q.limit(500);
-
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[listDepartmentComplaints]", error);
+      throw new Error("تعذّر تحميل الشكاوى");
+    }
     return Promise.all(
       (rows ?? []).map(async (r: any) => ({
         ...r,
@@ -105,24 +134,29 @@ export const departmentUpdateComplaint = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const deptId = await getMyDepartmentId(context.userId);
-    const general = await isGeneralAdmin(context.userId);
-    if (!deptId && !general) throw new Error("Forbidden");
-    // Verify ownership
+    const { departmentId, municipalityIds } = await resolveActorScope(context.userId);
+    if (!departmentId && municipalityIds.length === 0) throw new AuthzError();
+
     const { data: c } = await admin
       .from("complaints")
-      .select("id, assigned_department_id")
+      .select("id, assigned_department_id, municipality_id")
       .eq("id", data.id)
       .maybeSingle();
-    if (!c) throw new Error("Not found");
-    if (!general && c.assigned_department_id !== deptId)
-      throw new Error("Forbidden: not in your department");
+    if (!c) throw new Error("غير موجود");
+
+    const isDeptMatch = departmentId && c.assigned_department_id === departmentId;
+    const isMuniAdmin = municipalityIds.includes(c.municipality_id);
+    if (!isDeptMatch && !isMuniAdmin) throw new AuthzError();
+
     const patch: any = {};
     if (data.status) patch.status = data.status;
     if (data.internal_notes !== undefined) patch.internal_notes = data.internal_notes;
     if (!Object.keys(patch).length) return { ok: true };
     const { error } = await admin.from("complaints").update(patch).eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[departmentUpdateComplaint]", error);
+      throw new Error("تعذّر تحديث الشكوى");
+    }
     return { ok: true };
   });
 
@@ -139,35 +173,48 @@ export const redirectComplaint = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const actorId = context.userId;
-    const myDept = await getMyDepartmentId(actorId);
-    const general = await isGeneralAdmin(actorId);
-    if (!myDept && !general) throw new Error("Forbidden");
+    const { departmentId, municipalityIds } = await resolveActorScope(actorId);
+    if (!departmentId && municipalityIds.length === 0) throw new AuthzError();
 
     const { data: complaint } = await admin
       .from("complaints")
-      .select("id, user_id, assigned_department_id, title")
+      .select("id, user_id, assigned_department_id, municipality_id, title")
       .eq("id", data.complaint_id)
       .maybeSingle();
-    if (!complaint) throw new Error("Not found");
+    if (!complaint) throw new Error("غير موجود");
 
-    // Permission: general admin can redirect anything; dept admin only if it belongs to their dept
-    if (!general && complaint.assigned_department_id !== myDept) {
-      throw new Error("Forbidden: complaint not in your department");
+    // The actor must either own the source department of this complaint,
+    // or be an admin of the complaint's municipality.
+    const isDeptOrigin =
+      departmentId && complaint.assigned_department_id === departmentId;
+    const isMuniAdmin = municipalityIds.includes(complaint.municipality_id);
+    if (!isDeptOrigin && !isMuniAdmin) throw new AuthzError();
+
+    // Target department MUST belong to the SAME municipality as the complaint.
+    const { data: toDept } = await admin
+      .from("departments")
+      .select("id, name_ar, municipality_id")
+      .eq("id", data.to_department_id)
+      .maybeSingle();
+    if (!toDept) throw new Error("القسم غير موجود");
+    if (toDept.municipality_id !== complaint.municipality_id) {
+      throw new AuthzError("لا يمكن إحالة شكوى إلى قسم في بلدية أخرى");
     }
     if (complaint.assigned_department_id === data.to_department_id) {
-      throw new Error("Complaint already assigned to this department");
+      throw new Error("الشكوى محالة بالفعل إلى هذا القسم");
     }
 
     const fromDeptId = complaint.assigned_department_id;
 
-    // Update assignment
     const { error: uErr } = await admin
       .from("complaints")
       .update({ assigned_department_id: data.to_department_id })
       .eq("id", data.complaint_id);
-    if (uErr) throw new Error(uErr.message);
+    if (uErr) {
+      console.error("[redirectComplaint] update", uErr);
+      throw new Error("تعذّر إحالة الشكوى");
+    }
 
-    // Routing history
     await admin.from("complaint_routing_history").insert({
       complaint_id: data.complaint_id,
       from_department_id: fromDeptId,
@@ -176,22 +223,13 @@ export const redirectComplaint = createServerFn({ method: "POST" })
       reason: data.reason ?? null,
     });
 
-    // Notifications: complaint owner
-    const { data: toDept } = await admin
-      .from("departments")
-      .select("name_ar")
-      .eq("id", data.to_department_id)
-      .maybeSingle();
-    const deptName = toDept?.name_ar ?? "قسم آخر";
-
     await admin.from("notifications").insert({
       user_id: complaint.user_id,
       complaint_id: data.complaint_id,
       title: "تمت إحالة شكواك",
-      body: `تمت إحالة شكواك إلى ${deptName}`,
+      body: `تمت إحالة شكواك إلى ${toDept.name_ar}`,
     });
 
-    // Notify destination department admins
     const { data: targetAdmins } = await admin
       .from("department_admins")
       .select("user_id")
@@ -213,18 +251,30 @@ export const listRoutingHistory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ complaint_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const myDept = await getMyDepartmentId(context.userId);
-    const general = await isGeneralAdmin(context.userId);
-    if (!myDept && !general) throw new Error("Forbidden");
+    const { departmentId, municipalityIds } = await resolveActorScope(context.userId);
+    if (!departmentId && municipalityIds.length === 0) throw new AuthzError();
+
+    const { data: complaint } = await admin
+      .from("complaints")
+      .select("id, municipality_id, assigned_department_id")
+      .eq("id", data.complaint_id)
+      .maybeSingle();
+    if (!complaint) throw new Error("غير موجود");
+
+    const isDept = departmentId && complaint.assigned_department_id === departmentId;
+    const isMuni = municipalityIds.includes(complaint.municipality_id);
+    if (!isDept && !isMuni) throw new AuthzError();
 
     const { data: rows, error } = await admin
       .from("complaint_routing_history")
       .select("id, from_department_id, to_department_id, actor_user_id, reason, created_at")
       .eq("complaint_id", data.complaint_id)
       .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[listRoutingHistory]", error);
+      throw new Error("تعذّر تحميل السجل");
+    }
 
-    // Resolve department names + actor names
     const deptIds = Array.from(
       new Set(
         rows?.flatMap((r: any) => [r.from_department_id, r.to_department_id]).filter(Boolean) ?? [],
@@ -249,48 +299,85 @@ export const listRoutingHistory = createServerFn({ method: "POST" })
     }));
   });
 
-// ============ General admin: manage department admins ============
+// ============ Municipality super-admin: manage department admins ============
+// Only a municipality super_admin may assign a department admin, and ONLY for
+// departments inside their own municipality. Global Admin (platform role)
+// does NOT have municipality data access here.
 export const setDepartmentAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z
       .object({
         target_user_id: z.string().uuid(),
-        department_id: z.string().uuid().nullable(), // null = remove
+        department_id: z.string().uuid().nullable(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertGeneralAdmin(context.userId);
+    // Caller must be super_admin of some municipality.
+    const { data: myMemberships } = await admin
+      .from("municipality_members")
+      .select("municipality_id, role, municipalities:municipality_id(status)")
+      .eq("user_id", context.userId)
+      .eq("role", "super_admin");
+    const myMunis = (myMemberships ?? [])
+      .filter((m: any) => m.municipalities?.status === "verified")
+      .map((m: any) => m.municipality_id as string);
+    if (myMunis.length === 0) throw new AuthzError();
+
     if (data.department_id === null) {
+      // Removing — only allowed if the target's current department is in our munis.
+      const { data: cur } = await admin
+        .from("department_admins")
+        .select("department_id, departments:department_id(municipality_id)")
+        .eq("user_id", data.target_user_id)
+        .maybeSingle();
+      if (cur && !myMunis.includes((cur as any).departments?.municipality_id)) {
+        throw new AuthzError();
+      }
       const { error } = await admin
         .from("department_admins")
         .delete()
         .eq("user_id", data.target_user_id);
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("[setDepartmentAdmin] delete", error);
+        throw new Error("تعذّر إزالة المسؤول");
+      }
       return { ok: true, role: "citizen" as const };
     }
+
     const { data: dept } = await admin
       .from("departments")
-      .select("id")
+      .select("id, municipality_id")
       .eq("id", data.department_id)
       .maybeSingle();
-    if (!dept) throw new Error("Department not found");
+    if (!dept) throw new Error("القسم غير موجود");
+    if (!myMunis.includes(dept.municipality_id)) throw new AuthzError();
 
-    // Cannot be both general admin and department admin
-    const general = await isGeneralAdmin(data.target_user_id);
-    if (general) throw new Error("لا يمكن تعيين مسؤول عام كمسؤول قسم");
+    // A platform global admin cannot also become a department admin.
+    const { data: globalRow } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.target_user_id)
+      .eq("role", "global_admin")
+      .maybeSingle();
+    if (globalRow) throw new Error("لا يمكن تعيين مسؤول منصّة كمسؤول قسم");
 
-    // Upsert
     const { error: dErr } = await admin
       .from("department_admins")
       .delete()
       .eq("user_id", data.target_user_id);
-    if (dErr) throw new Error(dErr.message);
+    if (dErr) {
+      console.error("[setDepartmentAdmin] reset", dErr);
+      throw new Error("تعذّر تحديث المسؤول");
+    }
     const { error } = await admin.from("department_admins").insert({
       user_id: data.target_user_id,
       department_id: data.department_id,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[setDepartmentAdmin] insert", error);
+      throw new Error("تعذّر تعيين المسؤول");
+    }
     return { ok: true, role: "department_admin" as const };
   });

@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
+  requireMunicipalityAdmin,
+  sanitizeSearchTerm,
+} from "@/lib/authz.server";
+import { getPublicSupabaseClient } from "@/lib/supabase-public.server";
 
 const CategoryEnum = z.enum(["infrastructure", "public_lighting", "cleanliness", "other"]);
 const StatusEnum = z.enum(["pending", "in_progress", "resolved"]);
@@ -165,40 +170,42 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    // Reject pending/rejected municipalities
-    const { data: m } = await (supabaseAdmin as any)
+    // Use publishable client + RLS. The public-feed RLS policies and the
+    // verified-municipality filter together gate what anon can read.
+    const pub: any = getPublicSupabaseClient();
+    const { data: m } = await pub
       .from("municipalities")
       .select("status")
       .eq("id", data.municipality_id)
       .maybeSingle();
     if (!m || m.status !== "verified") return [];
 
-    let q = (supabaseAdmin as any)
+    let q = pub
       .from("complaints")
       .select(
         "id, complaint_number, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)",
       )
-
       .eq("municipality_id", data.municipality_id)
       .order("created_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.category) q = q.eq("category", data.category);
-    if (data.search) q = q.ilike("title", `%${data.search}%`);
+    if (data.search) {
+      const s = sanitizeSearchTerm(data.search);
+      if (s) q = q.ilike("title", `%${s}%`);
+    }
     const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[listPublicComplaints]", error);
+      return [];
+    }
     return withSignedAttachments(rows ?? []);
   });
 
 
-// ADMIN
-async function assertAdmin(supabase: any, userId: string) {
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .in("role", ["admin", "super_admin", "global_admin"]);
-  if (error) throw new Error(error.message);
-  if (!data || data.length === 0) throw new Error("Forbidden: admin only");
+// ADMIN — municipality-scoped. Global admin is platform-only and does NOT
+// have municipality data access here.
+async function assertMunicipalityAdmin(userId: string): Promise<string[]> {
+  return requireMunicipalityAdmin(userId);
 }
 
 export const adminListComplaints = createServerFn({ method: "POST" })
@@ -215,27 +222,37 @@ export const adminListComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    const muniIds = await assertMunicipalityAdmin(context.userId);
     let q = supabaseAdmin
       .from("complaints")
       .select(
-        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, municipality_id, attachments(id, storage_path, file_name, mime_type)",
       )
+      .in("municipality_id", muniIds)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
     if (data.category) q = q.eq("category", data.category);
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
     if (data.search) {
-      const s = data.search;
-      const uuid = /^[0-9a-f-]{36}$/i.test(s) ? s : "00000000-0000-0000-0000-000000000000";
-      q = q.or(
-        `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
-      );
+      const s = sanitizeSearchTerm(data.search);
+      const uuid = /^[0-9a-f-]{36}$/i.test(data.search.trim())
+        ? data.search.trim()
+        : "00000000-0000-0000-0000-000000000000";
+      if (s) {
+        q = q.or(
+          `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
+        );
+      } else {
+        q = q.eq("id", uuid);
+      }
     }
 
     const { data: rows, error } = await q.limit(500);
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[adminListComplaints]", error);
+      throw new Error("تعذّر تحميل الشكاوى");
+    }
     const userIds = Array.from(new Set((rows ?? []).map((r) => r.user_id)));
     let profilesMap = new Map<string, { full_name: string | null; email: string | null }>();
     if (userIds.length) {
@@ -254,9 +271,15 @@ export const adminListComplaints = createServerFn({ method: "POST" })
 export const adminMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const { data, error } = await supabaseAdmin.from("complaints").select("status");
-    if (error) throw new Error(error.message);
+    const muniIds = await assertMunicipalityAdmin(context.userId);
+    const { data, error } = await supabaseAdmin
+      .from("complaints")
+      .select("status")
+      .in("municipality_id", muniIds);
+    if (error) {
+      console.error("[adminMetrics]", error);
+      throw new Error("تعذّر تحميل الإحصائيات");
+    }
     const total = data.length;
     const pending = data.filter((r) => r.status === "pending").length;
     const in_progress = data.filter((r) => r.status === "in_progress").length;
@@ -276,15 +299,20 @@ export const adminUpdate = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    const muniIds = await assertMunicipalityAdmin(context.userId);
     const patch: { status?: "pending" | "in_progress" | "resolved"; internal_notes?: string } = {};
     if (data.status) patch.status = data.status;
     if (data.internal_notes !== undefined) patch.internal_notes = data.internal_notes;
     if (Object.keys(patch).length === 0) return { updated: 0 };
+    // Scope: only update complaints whose municipality the caller administers.
     const { error, count } = await supabaseAdmin
       .from("complaints")
       .update(patch, { count: "exact" })
-      .in("id", data.ids);
-    if (error) throw new Error(error.message);
+      .in("id", data.ids)
+      .in("municipality_id", muniIds);
+    if (error) {
+      console.error("[adminUpdate]", error);
+      throw new Error("تعذّر تحديث الشكاوى");
+    }
     return { updated: count ?? 0 };
   });
