@@ -29,7 +29,6 @@ import {
   validateSingleFile,
   validateAttachmentSet,
   isImageMime,
-  isPdfMime,
   fileDedupKey,
 } from "@/lib/upload-validation";
 
