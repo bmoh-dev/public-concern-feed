@@ -300,15 +300,20 @@ export const adminUpdate = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    const muniIds = await assertMunicipalityAdmin(context.userId);
     const patch: { status?: "pending" | "in_progress" | "resolved"; internal_notes?: string } = {};
     if (data.status) patch.status = data.status;
     if (data.internal_notes !== undefined) patch.internal_notes = data.internal_notes;
     if (Object.keys(patch).length === 0) return { updated: 0 };
+    // Scope: only update complaints whose municipality the caller administers.
     const { error, count } = await supabaseAdmin
       .from("complaints")
       .update(patch, { count: "exact" })
-      .in("id", data.ids);
-    if (error) throw new Error(error.message);
+      .in("id", data.ids)
+      .in("municipality_id", muniIds);
+    if (error) {
+      console.error("[adminUpdate]", error);
+      throw new Error("تعذّر تحديث الشكاوى");
+    }
     return { updated: count ?? 0 };
   });
