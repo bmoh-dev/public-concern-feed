@@ -64,17 +64,17 @@ export const submitComplaint = createServerFn({ method: "POST" })
                 .string()
                 .min(1)
                 .max(120)
-                .refine((m) => m.startsWith("image/") || m.startsWith("video/"), {
-                  message: "Only images and videos are allowed",
+                .refine((m) => (ALLOWED_MIME as readonly string[]).includes(m), {
+                  message: "نوع الملف غير مسموح به",
                 }),
               size_bytes: z
                 .number()
                 .int()
                 .min(1)
-                .max(8 * 1024 * 1024),
+                .max(10 * 1024 * 1024),
             }),
           )
-          .max(5)
+          .max(6)
           .optional(),
       })
       .parse(input),
@@ -82,6 +82,18 @@ export const submitComplaint = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const admin: any = supabaseAdmin;
+
+    // Rate limits: 5 / hour and 20 / day per user.
+    await enforceRateLimits([
+      { ...RATE_LIMITS.complaintSubmitHour, userId },
+      { ...RATE_LIMITS.complaintSubmitDay, userId },
+    ]);
+
+    // Server-side attachment shape validation (mime / size / counts).
+    if (data.attachments?.length) {
+      const err = validateAttachmentSet(data.attachments);
+      if (err) throw new Error(err);
+    }
 
     // Backend enforcement: verified municipality + membership
     const { data: m } = await admin
