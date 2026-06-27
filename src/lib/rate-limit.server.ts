@@ -32,6 +32,11 @@ export type RateLimitInput = {
    * else a best-effort IP-derived subject `ip:<addr>` from request headers.
    */
   subject?: string;
+  /**
+   * Units to consume in this call. Defaults to 1 (i.e. count of requests).
+   * Pass a byte count for bandwidth-style limits.
+   */
+  amount?: number;
 };
 
 function clientIp(): string | null {
@@ -74,6 +79,7 @@ export async function enforceRateLimit(input: RateLimitInput): Promise<void> {
     p_max: input.max,
     p_window_seconds: input.windowSeconds,
     p_user: input.userId ?? null,
+    p_amount: input.amount ?? 1,
   });
 
   if (error) {
@@ -89,6 +95,57 @@ export async function enforceRateLimit(input: RateLimitInput): Promise<void> {
       `تم تجاوز الحد المسموح به (${input.max} طلبات). ${formatRetryArabic(retry)}.`,
       retry,
     );
+  }
+}
+
+/**
+ * Format an absolute clock time in `Africa/Algiers` (the platform's primary
+ * locale) as `HH:MM`. Used for upload-bandwidth errors that must show the
+ * exact time uploads become available again.
+ */
+function formatLocalHHMM(date: Date): string {
+  return new Intl.DateTimeFormat("ar-DZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Africa/Algiers",
+  }).format(date);
+}
+
+/**
+ * Bandwidth-style rate limit for attachment uploads: 100 MB per user per hour
+ * by default. `bytes` is the size that just finished uploading successfully.
+ * On limit, throws with a clear Arabic message naming the exact local time
+ * when uploads will become available again (e.g. "ابتداءً من 14:35").
+ */
+export async function enforceUploadBandwidth(input: {
+  userId: string;
+  bytes: number;
+  /** Optional override of the policy (action / max / window). */
+  policy?: { action: string; max: number; windowSeconds: number };
+}): Promise<void> {
+  if (input.bytes <= 0) return;
+  const policy = input.policy ?? {
+    action: "upload:bytes:hour",
+    max: 100 * 1024 * 1024,
+    windowSeconds: 60 * 60,
+  };
+  try {
+    await enforceRateLimit({
+      ...policy,
+      userId: input.userId,
+      amount: Math.ceil(input.bytes),
+    });
+  } catch (e) {
+    if (e instanceof RateLimitError) {
+      const availableAt = new Date(Date.now() + e.retryAfterSeconds * 1000);
+      const hhmm = formatLocalHHMM(availableAt);
+      throw new RateLimitError(
+        `تم تجاوز الحد المسموح به لحجم الملفات المرفوعة. يمكنك رفع الملفات مرة أخرى ابتداءً من ${hhmm}.`,
+        e.retryAfterSeconds,
+      );
+    }
+    throw e;
   }
 }
 
