@@ -463,13 +463,16 @@ function SubmitPage() {
         </div>
 
         <div>
-          <Label>المرفقات (حتى {MAX_FILES} ملفات، 8MB لكل ملف)</Label>
+          <Label>
+            المرفقات (حتى {MAX_IMAGES_PER_COMPLAINT} صور و{MAX_PDFS_PER_COMPLAINT} ملف PDF،
+            بحد أقصى {MAX_ATTACHMENTS_TOTAL} مرفقات. الصور ≤ 5MB، PDF ≤ 10MB)
+          </Label>
           <label className="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground hover:bg-muted/60">
             <Upload className="h-4 w-4" />
-            انقر لاختيار صور أو فيديوهات
+            انقر لاختيار صور أو ملف PDF
             <input
               type="file"
-              accept="image/*,video/*"
+              accept={ALLOWED_MIME.join(",")}
               multiple
               hidden
               onChange={(e) => {
