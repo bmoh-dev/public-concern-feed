@@ -7,6 +7,12 @@ import {
   sanitizeSearchTerm,
 } from "@/lib/authz.server";
 import { getPublicSupabaseClient } from "@/lib/supabase-public.server";
+import { enforceRateLimit, enforceRateLimits } from "@/lib/rate-limit.server";
+import { RATE_LIMITS } from "@/lib/rate-limits";
+import {
+  ALLOWED_MIME,
+  validateAttachmentSet,
+} from "@/lib/upload-validation";
 
 const CategoryEnum = z.enum(["infrastructure", "public_lighting", "cleanliness", "other"]);
 const StatusEnum = z.enum(["pending", "in_progress", "resolved"]);
