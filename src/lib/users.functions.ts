@@ -2,16 +2,16 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { AuthzError, requireMunicipalityAdmin } from "@/lib/authz.server";
 
-async function assertAdmin(userId: string) {
-  const { data, error } = await supabaseAdmin
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .in("role", ["admin", "super_admin", "global_admin"]);
-  if (error) throw new Error(error.message);
-  if (!data || data.length === 0) throw new Error("Forbidden");
-}
+/**
+ * Only municipality admins/super_admins may use these user-management
+ * endpoints. Department admins are explicitly excluded — they cannot assign
+ * platform or municipality roles. Global Admin is platform-only and does not
+ * have municipality data access here. The legacy "admin" role toggled below
+ * is a municipality-scoped staff role; this endpoint will NEVER touch
+ * "global_admin" or "super_admin" (those have dedicated, separate flows).
+ */
 
 export const searchUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -19,15 +19,18 @@ export const searchUsers = createServerFn({ method: "POST" })
     z.object({ q: z.string().trim().max(200).optional().default("") }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await requireMunicipalityAdmin(context.userId);
     let query = supabaseAdmin
       .from("profiles")
       .select("id, full_name, email")
       .order("created_at", { ascending: false })
       .limit(50);
-    if (data.q) query = query.ilike("email", `%${data.q}%`);
+    if (data.q) query = query.ilike("email", `%${data.q.replace(/[%_\\]/g, " ")}%`);
     const { data: profiles, error } = await query;
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[searchUsers]", error);
+      throw new Error("تعذّر البحث عن المستخدمين");
+    }
     const ids = (profiles ?? []).map((p) => p.id);
     const roleMap = new Map<string, "global_admin" | "super_admin" | "admin" | "citizen">();
     const deptMap = new Map<string, { id: string; name: string }>();
@@ -75,15 +78,25 @@ export const changeUserRole = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await requireMunicipalityAdmin(context.userId);
     const actorId = context.userId;
     const targetId = data.target_user_id;
 
+    // Refuse to touch platform roles via this endpoint. Promotion to
+    // global_admin is handled exclusively by platform.functions.ts.
     const { data: targetRoles, error: rErr } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", targetId);
-    if (rErr) throw new Error(rErr.message);
+    if (rErr) {
+      console.error("[changeUserRole] read", rErr);
+      throw new Error("تعذّر قراءة دور المستخدم");
+    }
+    const hasGlobal = (targetRoles ?? []).some((r) => r.role === "global_admin");
+    const hasSuper = (targetRoles ?? []).some((r) => r.role === "super_admin");
+    if (hasGlobal || hasSuper) {
+      throw new AuthzError("لا يمكن تعديل أدوار المسؤولين عبر هذه الواجهة");
+    }
     const isAdmin = (targetRoles ?? []).some((r) => r.role === "admin");
     const previousRole: "admin" | "citizen" = isAdmin ? "admin" : "citizen";
 
@@ -92,15 +105,20 @@ export const changeUserRole = createServerFn({ method: "POST" })
       const { error } = await supabaseAdmin
         .from("user_roles")
         .insert({ user_id: targetId, role: "admin" });
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("[changeUserRole] insert", error);
+        throw new Error("تعذّر ترقية المستخدم");
+      }
     } else {
       if (!isAdmin) throw new Error("المستخدم ليس مسؤولاً");
-      // Count remaining admins
       const { count, error: cErr } = await supabaseAdmin
         .from("user_roles")
         .select("user_id", { count: "exact", head: true })
         .eq("role", "admin");
-      if (cErr) throw new Error(cErr.message);
+      if (cErr) {
+        console.error("[changeUserRole] count", cErr);
+        throw new Error("تعذّر تحديث الدور");
+      }
       if ((count ?? 0) <= 1) throw new Error("لا يمكن إزالة آخر مسؤول في النظام");
       if (targetId === actorId && (count ?? 0) <= 1) {
         throw new Error("لا يمكنك تخفيض نفسك كآخر مسؤول");
@@ -110,7 +128,10 @@ export const changeUserRole = createServerFn({ method: "POST" })
         .delete()
         .eq("user_id", targetId)
         .eq("role", "admin");
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("[changeUserRole] delete", error);
+        throw new Error("تعذّر تخفيض المستخدم");
+      }
     }
 
     const newRole: "admin" | "citizen" = data.action === "promote" ? "admin" : "citizen";
