@@ -142,6 +142,9 @@ export const joinMunicipality = createServerFn({ method: "POST" })
     const { userId } = context;
     const admin: any = supabaseAdmin;
 
+    // Max 20 join requests per 24h.
+    await enforceRateLimit({ ...RATE_LIMITS.municipalityJoinDay, userId });
+
     // Verify the municipality is verified
     const { data: m } = await admin
       .from("municipalities")
