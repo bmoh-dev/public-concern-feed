@@ -2,6 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
+  AuthzError,
+  requireMunicipalityAdmin,
+  sanitizeSearchTerm,
+} from "@/lib/authz.server";
+import { getPublicSupabaseClient } from "@/lib/supabase-public.server";
 
 const CategoryEnum = z.enum(["infrastructure", "public_lighting", "cleanliness", "other"]);
 const StatusEnum = z.enum(["pending", "in_progress", "resolved"]);
