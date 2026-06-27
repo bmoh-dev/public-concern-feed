@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { enforceRateLimit } from "@/lib/rate-limit.server";
+import { RATE_LIMITS } from "@/lib/rate-limits";
 
 async function assertGlobalAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
@@ -92,6 +94,10 @@ export const createMunicipality = createServerFn({ method: "POST" })
     const { userId } = context;
     const admin: any = supabaseAdmin;
 
+    // Max 3 municipality creation attempts per 24h.
+    await enforceRateLimit({ ...RATE_LIMITS.municipalityCreateDay, userId });
+
+
     // Uniqueness check (case-insensitive) — also enforced by index
     const { data: existing } = await admin
       .from("municipalities")
@@ -135,6 +141,9 @@ export const joinMunicipality = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const admin: any = supabaseAdmin;
+
+    // Max 20 join requests per 24h.
+    await enforceRateLimit({ ...RATE_LIMITS.municipalityJoinDay, userId });
 
     // Verify the municipality is verified
     const { data: m } = await admin
