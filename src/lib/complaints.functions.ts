@@ -171,40 +171,42 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    // Reject pending/rejected municipalities
-    const { data: m } = await (supabaseAdmin as any)
+    // Use publishable client + RLS. The public-feed RLS policies and the
+    // verified-municipality filter together gate what anon can read.
+    const pub: any = getPublicSupabaseClient();
+    const { data: m } = await pub
       .from("municipalities")
       .select("status")
       .eq("id", data.municipality_id)
       .maybeSingle();
     if (!m || m.status !== "verified") return [];
 
-    let q = (supabaseAdmin as any)
+    let q = pub
       .from("complaints")
       .select(
         "id, complaint_number, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)",
       )
-
       .eq("municipality_id", data.municipality_id)
       .order("created_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.category) q = q.eq("category", data.category);
-    if (data.search) q = q.ilike("title", `%${data.search}%`);
+    if (data.search) {
+      const s = sanitizeSearchTerm(data.search);
+      if (s) q = q.ilike("title", `%${s}%`);
+    }
     const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[listPublicComplaints]", error);
+      return [];
+    }
     return withSignedAttachments(rows ?? []);
   });
 
 
-// ADMIN
-async function assertAdmin(supabase: any, userId: string) {
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .in("role", ["admin", "super_admin", "global_admin"]);
-  if (error) throw new Error(error.message);
-  if (!data || data.length === 0) throw new Error("Forbidden: admin only");
+// ADMIN — municipality-scoped. Global admin is platform-only and does NOT
+// have municipality data access here.
+async function assertMunicipalityAdmin(userId: string): Promise<string[]> {
+  return requireMunicipalityAdmin(userId);
 }
 
 export const adminListComplaints = createServerFn({ method: "POST" })
