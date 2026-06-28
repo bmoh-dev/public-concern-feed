@@ -87,8 +87,10 @@ function AdminPage() {
     queryKey: ["admin-complaints", filters],
     queryFn: () => listFn({ data: filters }),
   });
-  const rows = complaintsResult?.rows ?? [];
-  const rateLimitMessage = complaintsResult?.rateLimitMessage ?? null;
+  const rows = Array.isArray(complaintsResult) ? complaintsResult : (complaintsResult?.rows ?? []);
+  const rateLimitMessage = Array.isArray(complaintsResult)
+    ? null
+    : (complaintsResult?.rateLimitMessage ?? null);
   const { data: metrics } = useQuery({ queryKey: ["admin-metrics"], queryFn: () => metricsFn() });
 
   const toggleAll = (checked: boolean) => {

@@ -41,6 +41,12 @@ export const Route = createFileRoute("/feed")({
 
 const PAGE_SIZE = 12;
 
+type ComplaintPage = { rows: any[]; rateLimitMessage: string | null };
+
+function normalizeComplaintPage(page: ComplaintPage | any[]): ComplaintPage {
+  return Array.isArray(page) ? { rows: page, rateLimitMessage: null } : page;
+}
+
 function FeedPage() {
   const { m: searchMunicipality } = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -82,13 +88,14 @@ function FeedPage() {
       }),
     initialPageParam: 0,
     getNextPageParam: (last, pages) =>
-      last.rows.length < PAGE_SIZE ? undefined : pages.length * PAGE_SIZE,
+      normalizeComplaintPage(last).rows.length < PAGE_SIZE ? undefined : pages.length * PAGE_SIZE,
   });
 
 
-  const items = query.data?.pages.flatMap((page) => page.rows) ?? [];
+  const normalizedPages = query.data?.pages.map(normalizeComplaintPage) ?? [];
+  const items = normalizedPages.flatMap((page) => page.rows);
   const rateLimitMessage =
-    query.data?.pages.find((page) => page.rateLimitMessage)?.rateLimitMessage ?? null;
+    normalizedPages.find((page) => page.rateLimitMessage)?.rateLimitMessage ?? null;
 
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
