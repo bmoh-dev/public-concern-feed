@@ -293,8 +293,9 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     const muniIds = await assertMunicipalityAdmin(context.userId);
     const searchTerm = data.search ? sanitizeSearchTerm(data.search) : "";
     if (searchTerm) {
-      const rateLimitMessage = await consumeSearchRateLimit(context.userId);
-      if (rateLimitMessage) return { rows: [], rateLimitMessage };
+      const rl = await consumeSearchRateLimit(context.userId);
+      if (rl)
+        return { rows: [], rateLimitMessage: rl.message, rateLimitResetAt: rl.resetAt };
     }
     let q = supabaseAdmin
       .from("complaints")
