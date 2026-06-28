@@ -180,6 +180,15 @@ function OnboardingPage() {
           <p className="text-xs text-muted-foreground">
             بعد إرسال الطلب، تتم مراجعته من إدارة المنصة قبل النشر للعامة.
           </p>
+          <div className="border-t pt-3 text-center">
+            <button
+              type="button"
+              onClick={() => setMode("choose")}
+              className="text-sm text-primary underline-offset-4 hover:underline"
+            >
+              الانضمام إلى بلدية موجودة
+            </button>
+          </div>
         </form>
       )}
     </div>

@@ -67,6 +67,19 @@ function AdminPage() {
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
 
+  // Search rate-limit cooldown: while active, do not fire new search requests.
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [cooldownUntil]);
+  const cooling = !!(cooldownUntil && cooldownUntil > now);
+  useEffect(() => {
+    if (cooldownUntil && cooldownUntil <= now) setCooldownUntil(null);
+  }, [cooldownUntil, now]);
+
   useEffect(() => {
     const handle = window.setTimeout(() => setDebouncedSearch(search.trim().slice(0, 200)), 400);
     return () => window.clearTimeout(handle);
@@ -86,11 +99,22 @@ function AdminPage() {
   const { data: complaintsResult, isLoading } = useQuery({
     queryKey: ["admin-complaints", filters],
     queryFn: () => listFn({ data: filters }),
+    enabled: !(cooling && !!filters.search),
+    placeholderData: (prev) => prev,
   });
   const rows = Array.isArray(complaintsResult) ? complaintsResult : (complaintsResult?.rows ?? []);
-  const rateLimitMessage = Array.isArray(complaintsResult)
-    ? null
-    : (complaintsResult?.rateLimitMessage ?? null);
+  const normalized =
+    complaintsResult && !Array.isArray(complaintsResult) ? complaintsResult : null;
+  const rateLimitMessage = cooling
+    ? (normalized?.rateLimitMessage ?? "تم تجاوز الحد المسموح به للبحث.")
+    : (normalized?.rateLimitMessage ?? null);
+  const rateLimitResetAt = normalized?.rateLimitResetAt ?? null;
+  useEffect(() => {
+    if (rateLimitResetAt) {
+      const t = new Date(rateLimitResetAt).getTime();
+      if (t > Date.now()) setCooldownUntil(t);
+    }
+  }, [rateLimitResetAt]);
   const { data: metrics } = useQuery({ queryKey: ["admin-metrics"], queryFn: () => metricsFn() });
 
   const toggleAll = (checked: boolean) => {

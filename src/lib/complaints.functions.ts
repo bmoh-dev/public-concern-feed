@@ -6,7 +6,7 @@ import {
   requireMunicipalityAdmin,
   sanitizeSearchTerm,
 } from "@/lib/authz.server";
-import { getPublicSupabaseClient } from "@/lib/supabase-public.server";
+
 import {
   enforceRateLimit,
   enforceRateLimits,
@@ -47,12 +47,29 @@ async function withSignedAttachments<R extends { attachments?: any[] | null }>(
   );
 }
 
-async function consumeSearchRateLimit(userId?: string | null): Promise<string | null> {
+type RateLimitInfo = { message: string; resetAt: string };
+
+function formatAlgiersHHMM(d: Date): string {
+  return new Intl.DateTimeFormat("ar-DZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Africa/Algiers",
+  }).format(d);
+}
+
+async function consumeSearchRateLimit(userId?: string | null): Promise<RateLimitInfo | null> {
   try {
     await enforceRateLimit({ ...RATE_LIMITS.searchPerMinute, userId: userId ?? undefined });
     return null;
   } catch (error) {
-    if (error instanceof RateLimitError) return error.message;
+    if (error instanceof RateLimitError) {
+      const reset = new Date(Date.now() + error.retryAfterSeconds * 1000);
+      return {
+        message: `يمكنك البحث مرة أخرى ابتداءً من ${formatAlgiersHHMM(reset)}.`,
+        resetAt: reset.toISOString(),
+      };
+    }
     throw error;
   }
 }
@@ -210,26 +227,27 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    // Use publishable client + RLS. The public-feed RLS policies and the
-    // verified-municipality filter together gate what anon can read.
-    const pub: any = getPublicSupabaseClient();
-    const { data: m } = await pub
+    // Use service-role admin client but explicitly scope to verified
+    // municipality + project safe columns. Anon-key/PostgREST reads via the
+    // publishable client were returning 0 rows because there is no public
+    // SELECT RLS policy on `public.complaints`.
+    const admin: any = supabaseAdmin;
+    const { data: m } = await admin
       .from("municipalities")
       .select("status")
       .eq("id", data.municipality_id)
       .maybeSingle();
-    if (!m || m.status !== "verified") return { rows: [], rateLimitMessage: null };
+    if (!m || m.status !== "verified")
+      return { rows: [], rateLimitMessage: null, rateLimitResetAt: null };
 
     const searchTerm = data.search ? sanitizeSearchTerm(data.search) : "";
     if (searchTerm) {
-      // Per-IP search rate limit for the anonymous public feed. Return a typed
-      // response instead of throwing so the page can show a message without a
-      // runtime-error overlay or React Query retry storm.
-      const rateLimitMessage = await consumeSearchRateLimit();
-      if (rateLimitMessage) return { rows: [], rateLimitMessage };
+      const rl = await consumeSearchRateLimit();
+      if (rl)
+        return { rows: [], rateLimitMessage: rl.message, rateLimitResetAt: rl.resetAt };
     }
 
-    let q = pub
+    let q = admin
       .from("complaints")
       .select(
         "id, complaint_number, title, category, status, address, latitude, longitude, description, created_at, attachments(id, storage_path, file_name, mime_type)",
@@ -242,9 +260,13 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
     const { data: rows, error } = await q;
     if (error) {
       console.error("[listPublicComplaints]", error);
-      return { rows: [], rateLimitMessage: null };
+      return { rows: [], rateLimitMessage: null, rateLimitResetAt: null };
     }
-    return { rows: await withSignedAttachments(rows ?? []), rateLimitMessage: null };
+    return {
+      rows: await withSignedAttachments(rows ?? []),
+      rateLimitMessage: null,
+      rateLimitResetAt: null,
+    };
   });
 
 
@@ -271,8 +293,9 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     const muniIds = await assertMunicipalityAdmin(context.userId);
     const searchTerm = data.search ? sanitizeSearchTerm(data.search) : "";
     if (searchTerm) {
-      const rateLimitMessage = await consumeSearchRateLimit(context.userId);
-      if (rateLimitMessage) return { rows: [], rateLimitMessage };
+      const rl = await consumeSearchRateLimit(context.userId);
+      if (rl)
+        return { rows: [], rateLimitMessage: rl.message, rateLimitResetAt: rl.resetAt };
     }
     let q = supabaseAdmin
       .from("complaints")
@@ -314,6 +337,7 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     return {
       rows: enriched.map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null })),
       rateLimitMessage: null,
+      rateLimitResetAt: null,
     };
   });
 

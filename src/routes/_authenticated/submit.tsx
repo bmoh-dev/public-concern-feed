@@ -183,12 +183,26 @@ function SubmitPage() {
 
     // Dedup against already-selected files (same name+size+lastModified).
     const existingKeys = new Set(uploads.map((it) => fileDedupKey(it.file)));
-    const incoming = Array.from(files).filter((f) => {
+    const incoming: File[] = [];
+    for (const f of Array.from(files)) {
       const k = fileDedupKey(f);
-      if (existingKeys.has(k)) return false;
+      if (existingKeys.has(k)) {
+        toast.error(`الملف "${f.name}" مُضاف مسبقًا.`);
+        continue;
+      }
       existingKeys.add(k);
-      return true;
-    });
+      incoming.push(f);
+    }
+
+    // Running tally so multiple files selected at once are validated
+    // collectively (state updates from setUploads are async and would
+    // otherwise be invisible inside this loop).
+    const projectedSoFar: { mime_type: string; size_bytes: number; file_name: string }[] =
+      uploads.map((it) => ({
+        mime_type: it.mime_type || it.file.type,
+        size_bytes: it.file.size > 0 ? it.file.size : (it.size_bytes ?? 0),
+        file_name: it.file.name,
+      }));
 
     for (const file of incoming) {
       // Per-file mime/size validation
@@ -199,20 +213,13 @@ function SubmitPage() {
         continue;
       }
 
-      // Aggregate caps (images / pdfs / total) — simulate adding this file
-      const projected = [
-        ...uploads.map((it) => ({
-          mime_type: it.file.type,
-          size_bytes: it.file.size,
-          file_name: it.file.name,
-        })),
-        meta,
-      ];
-      const setErr = validateAttachmentSet(projected);
+      // Aggregate caps (images / pdfs / total)
+      const setErr = validateAttachmentSet([...projectedSoFar, meta]);
       if (setErr) {
         toast.error(setErr);
         break;
       }
+      projectedSoFar.push(meta);
 
       const preview = isImageMime(file.type) ? URL.createObjectURL(file) : undefined;
       const item: UploadItem = { file, preview, progress: 5 };
@@ -471,8 +478,7 @@ function SubmitPage() {
 
         <div>
           <Label>
-            المرفقات (حتى {MAX_IMAGES_PER_COMPLAINT} صور و{MAX_PDFS_PER_COMPLAINT} ملف PDF،
-            بحد أقصى {MAX_ATTACHMENTS_TOTAL} مرفقات. الصور ≤ 5MB، PDF ≤ 10MB)
+            المرفقات: حتى 5 صور (5 MB لكل صورة) وملف PDF واحد (حتى 10 MB).
           </Label>
           <label className="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground hover:bg-muted/60">
             <Upload className="h-4 w-4" />
