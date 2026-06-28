@@ -43,7 +43,10 @@ type UploadItem = {
   progress: number;
   storage_path?: string;
   error?: string;
+  size_bytes?: number;
+  mime_type?: string;
 };
+
 
 const DRAFT_PREFIX = "complaint-draft:";
 export function clearAllComplaintDrafts() {
@@ -114,7 +117,10 @@ function SubmitPage() {
                 file: new File([], u.file_name, { type: u.mime_type || "" }),
                 progress: 100,
                 storage_path: u.storage_path,
+                size_bytes: typeof u.size_bytes === "number" ? u.size_bytes : 0,
+                mime_type: u.mime_type || "",
               }));
+
             setUploads(restored);
           }
         }
@@ -146,9 +152,10 @@ function SubmitPage() {
           .map((u) => ({
             storage_path: u.storage_path,
             file_name: u.file.name,
-            mime_type: u.file.type,
-            size_bytes: u.file.size,
+            mime_type: u.mime_type || u.file.type,
+            size_bytes: u.file.size > 0 ? u.file.size : (u.size_bytes ?? 0),
           })),
+
       };
       localStorage.setItem(draftKey, JSON.stringify(payload));
     } catch {}
@@ -265,9 +272,10 @@ function SubmitPage() {
         .map((it) => ({
           storage_path: it.storage_path!,
           file_name: it.file.name,
-          mime_type: it.file.type || "application/octet-stream",
-          size_bytes: it.file.size,
+          mime_type: it.mime_type || it.file.type || "application/octet-stream",
+          size_bytes: it.file.size > 0 ? it.file.size : (it.size_bytes ?? 0),
         }));
+
       const result = await submitFn({
         data: {
           municipality_id: activeMunicipalityId,
