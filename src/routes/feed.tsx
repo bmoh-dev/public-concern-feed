@@ -41,10 +41,16 @@ export const Route = createFileRoute("/feed")({
 
 const PAGE_SIZE = 12;
 
-type ComplaintPage = { rows: any[]; rateLimitMessage: string | null };
+type ComplaintPage = {
+  rows: any[];
+  rateLimitMessage: string | null;
+  rateLimitResetAt?: string | null;
+};
 
 function normalizeComplaintPage(page: ComplaintPage | any[]): ComplaintPage {
-  return Array.isArray(page) ? { rows: page, rateLimitMessage: null } : page;
+  return Array.isArray(page)
+    ? { rows: page, rateLimitMessage: null, rateLimitResetAt: null }
+    : page;
 }
 
 function FeedPage() {
