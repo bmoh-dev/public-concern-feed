@@ -190,6 +190,16 @@ function SubmitPage() {
       return true;
     });
 
+    // Running tally so multiple files selected at once are validated
+    // collectively (state updates from setUploads are async and would
+    // otherwise be invisible inside this loop).
+    const projectedSoFar: { mime_type: string; size_bytes: number; file_name: string }[] =
+      uploads.map((it) => ({
+        mime_type: it.mime_type || it.file.type,
+        size_bytes: it.file.size > 0 ? it.file.size : (it.size_bytes ?? 0),
+        file_name: it.file.name,
+      }));
+
     for (const file of incoming) {
       // Per-file mime/size validation
       const meta = { mime_type: file.type, size_bytes: file.size, file_name: file.name };
@@ -199,20 +209,13 @@ function SubmitPage() {
         continue;
       }
 
-      // Aggregate caps (images / pdfs / total) — simulate adding this file
-      const projected = [
-        ...uploads.map((it) => ({
-          mime_type: it.file.type,
-          size_bytes: it.file.size,
-          file_name: it.file.name,
-        })),
-        meta,
-      ];
-      const setErr = validateAttachmentSet(projected);
+      // Aggregate caps (images / pdfs / total)
+      const setErr = validateAttachmentSet([...projectedSoFar, meta]);
       if (setErr) {
         toast.error(setErr);
         break;
       }
+      projectedSoFar.push(meta);
 
       const preview = isImageMime(file.type) ? URL.createObjectURL(file) : undefined;
       const item: UploadItem = { file, preview, progress: 5 };
