@@ -6,7 +6,7 @@ import {
   requireMunicipalityAdmin,
   sanitizeSearchTerm,
 } from "@/lib/authz.server";
-import { getPublicSupabaseClient } from "@/lib/supabase-public.server";
+
 import {
   enforceRateLimit,
   enforceRateLimits,
