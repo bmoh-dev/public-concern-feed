@@ -82,11 +82,13 @@ function FeedPage() {
       }),
     initialPageParam: 0,
     getNextPageParam: (last, pages) =>
-      last.length < PAGE_SIZE ? undefined : pages.length * PAGE_SIZE,
+      last.rows.length < PAGE_SIZE ? undefined : pages.length * PAGE_SIZE,
   });
 
 
-  const items = query.data?.pages.flat() ?? [];
+  const items = query.data?.pages.flatMap((page) => page.rows) ?? [];
+  const rateLimitMessage =
+    query.data?.pages.find((page) => page.rateLimitMessage)?.rateLimitMessage ?? null;
 
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -182,6 +184,12 @@ function FeedPage() {
             ))}
           </TabsList>
         </Tabs>
+
+        {rateLimitMessage && (
+          <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            {rateLimitMessage}
+          </div>
+        )}
 
         {query.isLoading ? (
           <div className="mt-8 text-center text-sm text-muted-foreground">جارٍ التحميل...</div>

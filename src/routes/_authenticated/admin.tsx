@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminListComplaints, adminMetrics, adminUpdate } from "@/lib/complaints.functions";
@@ -58,6 +58,7 @@ function AdminPage() {
   const activeMunicipality = adminedMunicipalities[0] ?? null;
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [from, setFrom] = useState("");
@@ -66,21 +67,28 @@ function AdminPage() {
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => window.clearTimeout(handle);
+  }, [search]);
+
   const filters = useMemo(
     () => ({
-      search: search || null,
+      search: debouncedSearch || null,
       status: status === "all" ? null : (status as any),
       category: category === "all" ? null : (category as any),
       from: from ? new Date(from).toISOString() : null,
       to: to ? new Date(to + "T23:59:59").toISOString() : null,
     }),
-    [search, status, category, from, to],
+    [debouncedSearch, status, category, from, to],
   );
 
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: complaintsResult, isLoading } = useQuery({
     queryKey: ["admin-complaints", filters],
     queryFn: () => listFn({ data: filters }),
   });
+  const rows = complaintsResult?.rows ?? [];
+  const rateLimitMessage = complaintsResult?.rateLimitMessage ?? null;
   const { data: metrics } = useQuery({ queryKey: ["admin-metrics"], queryFn: () => metricsFn() });
 
   const toggleAll = (checked: boolean) => {
@@ -217,6 +225,12 @@ function AdminPage() {
           <Download className="ms-1 h-4 w-4" /> تصدير Excel
         </Button>
       </div>
+
+      {rateLimitMessage && (
+        <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {rateLimitMessage}
+        </div>
+      )}
 
       <div className="mt-4 overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
