@@ -232,7 +232,7 @@ function FeedPage() {
 
         {query.isLoading ? (
           <div className="mt-8 text-center text-sm text-muted-foreground">جارٍ التحميل...</div>
-        ) : items.length === 0 ? (
+        ) : view === "list" && items.length === 0 ? (
           <div className="mt-8 rounded-xl border bg-card p-10 text-center text-muted-foreground">
             لا توجد شكاوى.
           </div>
