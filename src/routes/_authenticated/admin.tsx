@@ -68,7 +68,7 @@ function AdminPage() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
-    const handle = window.setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    const handle = window.setTimeout(() => setDebouncedSearch(search.trim().slice(0, 200)), 400);
     return () => window.clearTimeout(handle);
   }, [search]);
 
@@ -172,6 +172,7 @@ function AdminPage() {
             className="pr-9"
             placeholder="ابحث بالعنوان، الوصف، أو رقم الشكوى"
             value={search}
+            maxLength={200}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
