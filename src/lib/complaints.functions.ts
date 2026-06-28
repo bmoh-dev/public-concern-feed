@@ -47,12 +47,29 @@ async function withSignedAttachments<R extends { attachments?: any[] | null }>(
   );
 }
 
-async function consumeSearchRateLimit(userId?: string | null): Promise<string | null> {
+type RateLimitInfo = { message: string; resetAt: string };
+
+function formatAlgiersHHMM(d: Date): string {
+  return new Intl.DateTimeFormat("ar-DZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Africa/Algiers",
+  }).format(d);
+}
+
+async function consumeSearchRateLimit(userId?: string | null): Promise<RateLimitInfo | null> {
   try {
     await enforceRateLimit({ ...RATE_LIMITS.searchPerMinute, userId: userId ?? undefined });
     return null;
   } catch (error) {
-    if (error instanceof RateLimitError) return error.message;
+    if (error instanceof RateLimitError) {
+      const reset = new Date(Date.now() + error.retryAfterSeconds * 1000);
+      return {
+        message: `يمكنك البحث مرة أخرى ابتداءً من ${formatAlgiersHHMM(reset)}.`,
+        resetAt: reset.toISOString(),
+      };
+    }
     throw error;
   }
 }
