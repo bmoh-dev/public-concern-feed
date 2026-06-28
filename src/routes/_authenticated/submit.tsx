@@ -183,12 +183,16 @@ function SubmitPage() {
 
     // Dedup against already-selected files (same name+size+lastModified).
     const existingKeys = new Set(uploads.map((it) => fileDedupKey(it.file)));
-    const incoming = Array.from(files).filter((f) => {
+    const incoming: File[] = [];
+    for (const f of Array.from(files)) {
       const k = fileDedupKey(f);
-      if (existingKeys.has(k)) return false;
+      if (existingKeys.has(k)) {
+        toast.error(`الملف "${f.name}" مُضاف مسبقًا.`);
+        continue;
+      }
       existingKeys.add(k);
-      return true;
-    });
+      incoming.push(f);
+    }
 
     // Running tally so multiple files selected at once are validated
     // collectively (state updates from setUploads are async and would
