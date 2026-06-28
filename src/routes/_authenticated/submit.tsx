@@ -117,7 +117,10 @@ function SubmitPage() {
                 file: new File([], u.file_name, { type: u.mime_type || "" }),
                 progress: 100,
                 storage_path: u.storage_path,
+                size_bytes: typeof u.size_bytes === "number" ? u.size_bytes : 0,
+                mime_type: u.mime_type || "",
               }));
+
             setUploads(restored);
           }
         }
