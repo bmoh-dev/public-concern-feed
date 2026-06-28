@@ -7,7 +7,12 @@ import {
   sanitizeSearchTerm,
 } from "@/lib/authz.server";
 import { getPublicSupabaseClient } from "@/lib/supabase-public.server";
-import { enforceRateLimit, enforceRateLimits, enforceUploadBandwidth } from "@/lib/rate-limit.server";
+import {
+  enforceRateLimit,
+  enforceRateLimits,
+  enforceUploadBandwidth,
+  RateLimitError,
+} from "@/lib/rate-limit.server";
 import { RATE_LIMITS } from "@/lib/rate-limits";
 import {
   ALLOWED_MIME,
@@ -40,6 +45,16 @@ async function withSignedAttachments<R extends { attachments?: any[] | null }>(
   return Promise.all(
     rows.map(async (r) => ({ ...r, attachments: await signAttachments(r.attachments ?? []) })),
   );
+}
+
+async function consumeSearchRateLimit(userId?: string | null): Promise<string | null> {
+  try {
+    await enforceRateLimit({ ...RATE_LIMITS.searchPerMinute, userId: userId ?? undefined });
+    return null;
+  } catch (error) {
+    if (error instanceof RateLimitError) return error.message;
+    throw error;
+  }
 }
 
 
@@ -203,7 +218,16 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
       .select("status")
       .eq("id", data.municipality_id)
       .maybeSingle();
-    if (!m || m.status !== "verified") return [];
+    if (!m || m.status !== "verified") return { rows: [], rateLimitMessage: null };
+
+    const searchTerm = data.search ? sanitizeSearchTerm(data.search) : "";
+    if (searchTerm) {
+      // Per-IP search rate limit for the anonymous public feed. Return a typed
+      // response instead of throwing so the page can show a message without a
+      // runtime-error overlay or React Query retry storm.
+      const rateLimitMessage = await consumeSearchRateLimit();
+      if (rateLimitMessage) return { rows: [], rateLimitMessage };
+    }
 
     let q = pub
       .from("complaints")
@@ -214,18 +238,13 @@ export const listPublicComplaints = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.category) q = q.eq("category", data.category);
-    if (data.search) {
-      // Per-IP search rate limit for the anonymous public feed.
-      await enforceRateLimit({ ...RATE_LIMITS.searchPerMinute });
-      const s = sanitizeSearchTerm(data.search);
-      if (s) q = q.ilike("title", `%${s}%`);
-    }
+    if (searchTerm) q = q.ilike("title", `%${searchTerm}%`);
     const { data: rows, error } = await q;
     if (error) {
       console.error("[listPublicComplaints]", error);
-      return [];
+      return { rows: [], rateLimitMessage: null };
     }
-    return withSignedAttachments(rows ?? []);
+    return { rows: await withSignedAttachments(rows ?? []), rateLimitMessage: null };
   });
 
 
@@ -250,8 +269,10 @@ export const adminListComplaints = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const muniIds = await assertMunicipalityAdmin(context.userId);
-    if (data.search) {
-      await enforceRateLimit({ ...RATE_LIMITS.searchPerMinute, userId: context.userId });
+    const searchTerm = data.search ? sanitizeSearchTerm(data.search) : "";
+    if (searchTerm) {
+      const rateLimitMessage = await consumeSearchRateLimit(context.userId);
+      if (rateLimitMessage) return { rows: [], rateLimitMessage };
     }
     let q = supabaseAdmin
       .from("complaints")
@@ -264,18 +285,13 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     if (data.category) q = q.eq("category", data.category);
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
-    if (data.search) {
-      const s = sanitizeSearchTerm(data.search);
-      const uuid = /^[0-9a-f-]{36}$/i.test(data.search.trim())
+    if (searchTerm) {
+      const uuid = /^[0-9a-f-]{36}$/i.test(searchTerm)
         ? data.search.trim()
         : "00000000-0000-0000-0000-000000000000";
-      if (s) {
-        q = q.or(
-          `title.ilike.%${s}%,description.ilike.%${s}%,complaint_number.ilike.%${s}%,id.eq.${uuid}`,
-        );
-      } else {
-        q = q.eq("id", uuid);
-      }
+      q = q.or(
+        `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,complaint_number.ilike.%${searchTerm}%,id.eq.${uuid}`,
+      );
     }
 
     const { data: rows, error } = await q.limit(500);
@@ -295,7 +311,10 @@ export const adminListComplaints = createServerFn({ method: "POST" })
       );
     }
     const enriched = await withSignedAttachments(rows ?? []);
-    return enriched.map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null }));
+    return {
+      rows: enriched.map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null })),
+      rateLimitMessage: null,
+    };
   });
 
 export const adminMetrics = createServerFn({ method: "GET" })
