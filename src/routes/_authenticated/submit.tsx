@@ -271,9 +271,10 @@ function SubmitPage() {
         .map((it) => ({
           storage_path: it.storage_path!,
           file_name: it.file.name,
-          mime_type: it.file.type || "application/octet-stream",
-          size_bytes: it.file.size,
+          mime_type: it.mime_type || it.file.type || "application/octet-stream",
+          size_bytes: it.file.size > 0 ? it.file.size : (it.size_bytes ?? 0),
         }));
+
       const result = await submitFn({
         data: {
           municipality_id: activeMunicipalityId,
