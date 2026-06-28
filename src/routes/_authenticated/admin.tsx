@@ -172,6 +172,7 @@ function AdminPage() {
             className="pr-9"
             placeholder="ابحث بالعنوان، الوصف، أو رقم الشكوى"
             value={search}
+            maxLength={200}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
