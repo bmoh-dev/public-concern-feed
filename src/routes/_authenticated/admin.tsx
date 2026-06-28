@@ -86,11 +86,22 @@ function AdminPage() {
   const { data: complaintsResult, isLoading } = useQuery({
     queryKey: ["admin-complaints", filters],
     queryFn: () => listFn({ data: filters }),
+    enabled: !(cooling && !!filters.search),
+    placeholderData: (prev) => prev,
   });
   const rows = Array.isArray(complaintsResult) ? complaintsResult : (complaintsResult?.rows ?? []);
-  const rateLimitMessage = Array.isArray(complaintsResult)
-    ? null
-    : (complaintsResult?.rateLimitMessage ?? null);
+  const normalized =
+    complaintsResult && !Array.isArray(complaintsResult) ? complaintsResult : null;
+  const rateLimitMessage = cooling
+    ? (normalized?.rateLimitMessage ?? "تم تجاوز الحد المسموح به للبحث.")
+    : (normalized?.rateLimitMessage ?? null);
+  const rateLimitResetAt = normalized?.rateLimitResetAt ?? null;
+  useEffect(() => {
+    if (rateLimitResetAt) {
+      const t = new Date(rateLimitResetAt).getTime();
+      if (t > Date.now()) setCooldownUntil(t);
+    }
+  }, [rateLimitResetAt]);
   const { data: metrics } = useQuery({ queryKey: ["admin-metrics"], queryFn: () => metricsFn() });
 
   const toggleAll = (checked: boolean) => {
