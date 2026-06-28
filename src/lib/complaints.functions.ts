@@ -337,6 +337,7 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     return {
       rows: enriched.map((r) => ({ ...r, profiles: profilesMap.get(r.user_id) ?? null })),
       rateLimitMessage: null,
+      rateLimitResetAt: null,
     };
   });
 
