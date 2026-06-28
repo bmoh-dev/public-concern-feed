@@ -79,9 +79,24 @@ function FeedPage() {
 
   const category = tab === "all" ? null : (tab as any);
 
+  // Search rate-limit cooldown. While active, do not fire new search
+  // requests — but keep already-loaded results on screen.
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [cooldownUntil]);
+  const cooling = !!(cooldownUntil && cooldownUntil > now);
+  useEffect(() => {
+    if (cooldownUntil && cooldownUntil <= now) setCooldownUntil(null);
+  }, [cooldownUntil, now]);
+
+  const searchActive = !!committed;
   const query = useInfiniteQuery({
     queryKey: ["public-complaints", municipalityId, category, committed],
-    enabled: !!municipalityId,
+    enabled: !!municipalityId && !(cooling && searchActive),
     queryFn: ({ pageParam = 0 }) =>
       listFn({
         data: {
@@ -100,8 +115,19 @@ function FeedPage() {
 
   const normalizedPages = query.data?.pages.map(normalizeComplaintPage) ?? [];
   const items = normalizedPages.flatMap((page) => page.rows);
-  const rateLimitMessage =
-    normalizedPages.find((page) => page.rateLimitMessage)?.rateLimitMessage ?? null;
+  const latestRateLimited = normalizedPages.find((p) => p.rateLimitMessage);
+  const rateLimitMessage = cooling
+    ? latestRateLimited?.rateLimitMessage ?? "تم تجاوز الحد المسموح به للبحث."
+    : latestRateLimited?.rateLimitMessage ?? null;
+
+  // Track cooldown when server reports a reset time.
+  useEffect(() => {
+    const resetAt = latestRateLimited?.rateLimitResetAt;
+    if (resetAt) {
+      const t = new Date(resetAt).getTime();
+      if (t > Date.now()) setCooldownUntil(t);
+    }
+  }, [latestRateLimited?.rateLimitResetAt]);
 
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
