@@ -67,6 +67,19 @@ function AdminPage() {
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
 
+  // Search rate-limit cooldown: while active, do not fire new search requests.
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [cooldownUntil]);
+  const cooling = !!(cooldownUntil && cooldownUntil > now);
+  useEffect(() => {
+    if (cooldownUntil && cooldownUntil <= now) setCooldownUntil(null);
+  }, [cooldownUntil, now]);
+
   useEffect(() => {
     const handle = window.setTimeout(() => setDebouncedSearch(search.trim().slice(0, 200)), 400);
     return () => window.clearTimeout(handle);
