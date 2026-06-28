@@ -152,9 +152,10 @@ function SubmitPage() {
           .map((u) => ({
             storage_path: u.storage_path,
             file_name: u.file.name,
-            mime_type: u.file.type,
-            size_bytes: u.file.size,
+            mime_type: u.mime_type || u.file.type,
+            size_bytes: u.file.size > 0 ? u.file.size : (u.size_bytes ?? 0),
           })),
+
       };
       localStorage.setItem(draftKey, JSON.stringify(payload));
     } catch {}
