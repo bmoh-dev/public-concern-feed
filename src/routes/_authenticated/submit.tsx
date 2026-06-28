@@ -43,7 +43,10 @@ type UploadItem = {
   progress: number;
   storage_path?: string;
   error?: string;
+  size_bytes?: number;
+  mime_type?: string;
 };
+
 
 const DRAFT_PREFIX = "complaint-draft:";
 export function clearAllComplaintDrafts() {
