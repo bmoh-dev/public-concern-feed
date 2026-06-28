@@ -287,7 +287,7 @@ export const adminListComplaints = createServerFn({ method: "POST" })
     if (data.to) q = q.lte("created_at", data.to);
     if (searchTerm) {
       const uuid = /^[0-9a-f-]{36}$/i.test(searchTerm)
-        ? data.search.trim()
+        ? searchTerm
         : "00000000-0000-0000-0000-000000000000";
       q = q.or(
         `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,complaint_number.ilike.%${searchTerm}%,id.eq.${uuid}`,

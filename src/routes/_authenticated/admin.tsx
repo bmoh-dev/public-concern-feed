@@ -77,10 +77,12 @@ function AdminPage() {
     [search, status, category, from, to],
   );
 
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: complaintsResult, isLoading } = useQuery({
     queryKey: ["admin-complaints", filters],
     queryFn: () => listFn({ data: filters }),
   });
+  const rows = complaintsResult?.rows ?? [];
+  const rateLimitMessage = complaintsResult?.rateLimitMessage ?? null;
   const { data: metrics } = useQuery({ queryKey: ["admin-metrics"], queryFn: () => metricsFn() });
 
   const toggleAll = (checked: boolean) => {
@@ -217,6 +219,12 @@ function AdminPage() {
           <Download className="ms-1 h-4 w-4" /> تصدير Excel
         </Button>
       </div>
+
+      {rateLimitMessage && (
+        <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {rateLimitMessage}
+        </div>
+      )}
 
       <div className="mt-4 overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
