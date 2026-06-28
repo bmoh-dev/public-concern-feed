@@ -68,7 +68,7 @@ function AdminPage() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
-    const handle = window.setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    const handle = window.setTimeout(() => setDebouncedSearch(search.trim().slice(0, 200)), 400);
     return () => window.clearTimeout(handle);
   }, [search]);
 
