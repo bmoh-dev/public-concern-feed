@@ -255,7 +255,7 @@ function AdminPage() {
       </div>
 
       {rateLimitMessage && (
-        <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="mt-4 whitespace-pre-line rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {rateLimitMessage}
         </div>
       )}
