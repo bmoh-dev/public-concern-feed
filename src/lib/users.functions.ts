@@ -42,10 +42,12 @@ export const searchUsers = createServerFn({ method: "POST" })
       .from("municipality_members")
       .select("user_id")
       .in("municipality_id", muniIds);
-    const memberIds = Array.from(new Set((members ?? []).map((m: any) => m.user_id as string)));
+    const memberIds: string[] = Array.from(
+      new Set((members ?? []).map((m: any) => m.user_id as string)),
+    );
     if (!memberIds.length) return [];
 
-    let query = supabaseAdmin
+    let query = (supabaseAdmin as any)
       .from("profiles")
       .select("id, full_name, email")
       .in("id", memberIds)
