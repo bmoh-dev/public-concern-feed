@@ -59,7 +59,7 @@ export const searchUsers = createServerFn({ method: "POST" })
       console.error("[searchUsers]", error);
       throw new Error("تعذّر البحث عن المستخدمين");
     }
-    const ids = (profiles ?? []).map((p) => p.id);
+    const ids: string[] = (profiles ?? []).map((p: any) => p.id);
     const roleMap = new Map<string, "global_admin" | "super_admin" | "admin" | "citizen">();
     const deptMap = new Map<string, { id: string; name: string }>();
     if (ids.length) {
