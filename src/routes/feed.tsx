@@ -61,6 +61,7 @@ function FeedPage() {
   const [committed, setCommitted] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [wilaya, setWilaya] = useState<string>("all");
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session?.user));
@@ -75,7 +76,25 @@ function FeedPage() {
     queryFn: () => munFn(),
   });
 
-  const municipalityId = searchMunicipality || municipalities[0]?.id || "";
+  const wilayas = Array.from(
+    new Set((municipalities as any[]).map((m) => m.wilaya).filter(Boolean)),
+  ).sort((a, b) => String(a).localeCompare(String(b), "ar"));
+
+  const filteredMunis = (municipalities as any[]).filter(
+    (m) => wilaya === "all" || m.wilaya === wilaya,
+  );
+
+  const municipalityId =
+    searchMunicipality && filteredMunis.some((m) => m.id === searchMunicipality)
+      ? searchMunicipality
+      : filteredMunis[0]?.id || "";
+
+  useEffect(() => {
+    if (searchMunicipality && !filteredMunis.some((m) => m.id === searchMunicipality)) {
+      navigate({ search: { m: filteredMunis[0]?.id }, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wilaya]);
 
   const category = tab === "all" ? null : (tab as any);
 
@@ -151,28 +170,49 @@ function FeedPage() {
           للمشاركة والتعليق يجب تسجيل الدخول بحساب Google.
         </p>
 
-        <div className="mt-4 max-w-md">
-          <label className="text-sm font-medium">البلدية</label>
-          <Select
-            value={municipalityId}
-            onValueChange={(v) => navigate({ search: { m: v }, replace: true })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="اختر بلدية للعرض" />
-            </SelectTrigger>
-            <SelectContent>
-              {municipalities.map((m: any) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.name} — {m.wilaya}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 max-w-2xl">
+          <div>
+            <label className="text-sm font-medium">الولاية</label>
+            <Select value={wilaya} onValueChange={setWilaya}>
+              <SelectTrigger>
+                <SelectValue placeholder="كل الولايات" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الولايات</SelectItem>
+                {wilayas.map((w) => (
+                  <SelectItem key={String(w)} value={String(w)}>
+                    {String(w)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium">البلدية</label>
+            <Select
+              value={municipalityId}
+              onValueChange={(v) => navigate({ search: { m: v }, replace: true })}
+              disabled={filteredMunis.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="اختر بلدية للعرض" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredMunis.map((m: any) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name} — {m.wilaya}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {!municipalityId && (
-          <div className="mt-6 rounded-xl border bg-card p-6 text-center text-muted-foreground">
-            اختر بلدية لعرض الشكاوى.
+          <div className="mt-6 rounded-xl border bg-card p-10 text-center text-muted-foreground">
+            {wilaya === "all"
+              ? "اختر بلدية لعرض الشكاوى."
+              : "لا توجد بلديات موثّقة في هذه الولاية."}
           </div>
         )}
 
