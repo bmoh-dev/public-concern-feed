@@ -414,7 +414,7 @@ function MunicipalitySuperAdminSection({
         <p className="text-sm text-muted-foreground">لا يوجد مسؤولون أعلى مسجّلون.</p>
       ) : (
         <ul className="divide-y rounded-lg border">
-          {admins.map((a) => {
+          {admins.map((a: { user_id: string; full_name: string | null; email: string | null; is_self: boolean }) => {
             const displayName = a.full_name || a.email || "مستخدم";
             const showEmail = a.email && a.email !== displayName;
             return (
