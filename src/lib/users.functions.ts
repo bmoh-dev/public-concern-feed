@@ -104,7 +104,7 @@ export const searchUsers = createServerFn({ method: "POST" })
         muniRoleMap.set(m.user_id, m.role);
       }
     }
-    return (profiles ?? []).map((p) => ({
+    return (profiles ?? []).map((p: any) => ({
       id: p.id,
       full_name: p.full_name,
       email: p.email,
