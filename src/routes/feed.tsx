@@ -222,6 +222,7 @@ function FeedPage() {
             className="relative flex-1"
             onSubmit={(e) => {
               e.preventDefault();
+              if (cooling) return;
               setCommitted(search);
             }}
           >
@@ -230,7 +231,9 @@ function FeedPage() {
               className="pr-9"
               placeholder="ابحث بعنوان الشكوى"
               value={search}
+              maxLength={200}
               onChange={(e) => setSearch(e.target.value)}
+              disabled={cooling}
             />
           </form>
           <div className="inline-flex rounded-md border bg-card p-1">
