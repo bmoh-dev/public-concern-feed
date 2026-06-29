@@ -66,7 +66,9 @@ async function consumeSearchRateLimit(userId?: string | null): Promise<RateLimit
     if (error instanceof RateLimitError) {
       const reset = new Date(Date.now() + error.retryAfterSeconds * 1000);
       return {
-        message: `يمكنك البحث مرة أخرى ابتداءً من ${formatAlgiersHHMM(reset)}.`,
+        message:
+          `لقد وصلت إلى الحد المسموح لعمليات البحث.\n` +
+          `يمكنك البحث مرة أخرى ابتداءً من ${formatAlgiersHHMM(reset)}.`,
         resetAt: reset.toISOString(),
       };
     }

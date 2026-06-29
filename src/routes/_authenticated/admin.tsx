@@ -198,6 +198,7 @@ function AdminPage() {
             value={search}
             maxLength={200}
             onChange={(e) => setSearch(e.target.value)}
+            disabled={cooling}
           />
         </div>
         <Select value={status} onValueChange={setStatus}>
@@ -254,7 +255,7 @@ function AdminPage() {
       </div>
 
       {rateLimitMessage && (
-        <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="mt-4 whitespace-pre-line rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {rateLimitMessage}
         </div>
       )}

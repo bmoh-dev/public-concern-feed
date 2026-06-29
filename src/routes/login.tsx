@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { getMyRole } from "@/lib/notifications.functions";
+import { getMyOnboardingState } from "@/lib/municipalities.functions";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search): { redirect?: string } => ({
@@ -17,30 +19,55 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+/**
+ * Compute the default landing path after a successful login.
+ * Priority: pending municipality request > Global Admin > Municipality Super Admin > public feed.
+ */
+async function resolveLandingPath(): Promise<string> {
+  try {
+    const [state, role] = await Promise.all([
+      getMyOnboardingState(),
+      getMyRole(),
+    ]);
+    if ((state.pendingOwned?.length ?? 0) > 0) return "/onboarding";
+    if (role.isGlobalAdmin) return "/platform-admin";
+    const isSuperAdmin = (role.municipalities ?? []).some(
+      (m: any) => m.role === "super_admin",
+    );
+    if (isSuperAdmin) return "/admin";
+    return "/feed";
+  } catch {
+    return "/feed";
+  }
+}
+
 function LoginPage() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
   const [loading, setLoading] = useState(false);
 
-  const target = redirect ?? "/my-complaints";
-
   useEffect(() => {
-    const redirectAfterAuth = () => {
-      supabase.auth.getUser().then(({ data, error }) => {
-        if (!error && data.user) navigate({ to: target as any, replace: true });
-      });
+    let cancelled = false;
+    const go = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user || cancelled) return;
+      const target = redirect ?? (await resolveLandingPath());
+      if (!cancelled) navigate({ to: target as any, replace: true });
     };
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) redirectAfterAuth();
+      if (session) void go();
     });
-    redirectAfterAuth();
-    return () => sub.subscription.unsubscribe();
-  }, [navigate, target]);
+    void go();
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, [navigate, redirect]);
 
   const signIn = async () => {
     setLoading(true);
     const callbackUrl = new URL("/login", window.location.origin);
-    callbackUrl.searchParams.set("redirect", target);
+    if (redirect) callbackUrl.searchParams.set("redirect", redirect);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: callbackUrl.toString(),
     });
