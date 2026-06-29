@@ -198,6 +198,7 @@ function AdminPage() {
             value={search}
             maxLength={200}
             onChange={(e) => setSearch(e.target.value)}
+            disabled={cooling}
           />
         </div>
         <Select value={status} onValueChange={setStatus}>
