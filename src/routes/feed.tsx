@@ -332,12 +332,12 @@ function FeedPage() {
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm">{c.description}</p>
                     {c.attachments?.length > 0 && (
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {c.attachments.map((a: any) => (
-                          <AttachmentThumb key={a.id} a={a} />
-                        ))}
-                      </div>
+                      <AttachmentGroup
+                        attachments={c.attachments}
+                        className="mt-3 grid grid-cols-3 gap-2"
+                      />
                     )}
+
                   </article>
 
                 );
