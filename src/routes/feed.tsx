@@ -177,10 +177,9 @@ function FeedPage() {
             <label className="text-sm font-medium">الولاية</label>
             <Select value={wilaya} onValueChange={setWilaya}>
               <SelectTrigger>
-                <SelectValue placeholder="كل الولايات" />
+                <SelectValue placeholder="اختر ولاية" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">كل الولايات</SelectItem>
                 {wilayas.map((w) => (
                   <SelectItem key={String(w)} value={String(w)}>
                     {String(w)}
@@ -194,10 +193,12 @@ function FeedPage() {
             <Select
               value={municipalityId}
               onValueChange={(v) => navigate({ search: { m: v }, replace: true })}
-              disabled={filteredMunis.length === 0}
+              disabled={!wilayaSelected || filteredMunis.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder="اختر بلدية للعرض" />
+                <SelectValue
+                  placeholder={wilayaSelected ? "اختر بلدية للعرض" : "اختر ولاية أولاً"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredMunis.map((m: any) => (
@@ -212,11 +213,13 @@ function FeedPage() {
 
         {!municipalityId && (
           <div className="mt-6 rounded-xl border bg-card p-10 text-center text-muted-foreground">
-            {wilaya === "all"
-              ? "اختر بلدية لعرض الشكاوى."
+            {!wilayaSelected
+              ? "اختر ولاية أولاً لعرض البلديات."
               : "لا توجد بلديات موثّقة في هذه الولاية."}
           </div>
         )}
+
+
 
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
