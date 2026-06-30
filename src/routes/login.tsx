@@ -97,12 +97,15 @@ function LoginPage() {
         >
           <GoogleIcon /> <span className="ms-2">المتابعة باستخدام Google</span>
         </Button>
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          بالعودة إلى{" "}
-          <Link to="/" className="underline">
-            الصفحة الرئيسية
-          </Link>
-        </p>
+        <div className="mt-6 flex justify-center">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/">
+              <ArrowRight className="ms-1 h-4 w-4" />
+              العودة إلى الصفحة الرئيسية
+            </Link>
+          </Button>
+        </div>
+
       </div>
     </div>
   );
