@@ -169,13 +169,11 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
   const qc = useQueryClient();
   const updateFn = useServerFn(departmentUpdateComplaint);
   const [status, setStatus] = useState<string>(row?.status ?? "pending");
-  const [notes, setNotes] = useState<string>(row?.internal_notes ?? "");
   const [saving, setSaving] = useState(false);
 
   useMemo(() => {
     if (row) {
       setStatus(row.status);
-      setNotes(row.internal_notes ?? "");
     }
   }, [row]);
 
@@ -183,7 +181,7 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
     if (!id) return;
     setSaving(true);
     try {
-      await updateFn({ data: { id, status: status as any, internal_notes: notes } });
+      await updateFn({ data: { id, status: status as any } });
       toast.success("تم الحفظ");
       qc.invalidateQueries({ queryKey: ["dept-complaints"] });
       onClose();
