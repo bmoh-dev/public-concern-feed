@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES, STATUSES } from "@/lib/i18n";
 import { Search } from "lucide-react";
+import { AttachmentGroup } from "@/components/AttachmentLightbox";
+
 
 
 export const Route = createFileRoute("/_authenticated/my-complaints")({
@@ -179,13 +181,13 @@ function ComplaintDetailDialog({ id, onClose }: { id: string | null; onClose: ()
             {data.attachments?.length > 0 && (
               <div>
                 <h4 className="mb-2 text-sm font-semibold">المرفقات</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {data.attachments.map((a: any) => (
-                    <AttachmentThumb key={a.id} a={a} />
-                  ))}
-                </div>
+                <AttachmentGroup
+                  attachments={data.attachments}
+                  className="grid grid-cols-3 gap-2"
+                />
               </div>
             )}
+
           </div>
         )}
       </DialogContent>

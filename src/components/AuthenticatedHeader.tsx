@@ -50,7 +50,7 @@ export function AuthenticatedHeader() {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") qc.invalidateQueries();
-      if (!session) navigate({ to: "/login", replace: true });
+      if (!session) navigate({ to: "/", replace: true });
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate, router, qc]);
@@ -63,8 +63,9 @@ export function AuthenticatedHeader() {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/login", replace: true });
+    navigate({ to: "/", replace: true });
   };
+
 
   const roleFn = useServerFn(getMyRole);
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
@@ -118,11 +119,8 @@ export function AuthenticatedHeader() {
               <Link to="/platform-admin">إدارة المنصّة</Link>
             </Button>
           )}
-          {role?.isGlobalAdmin && (
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/platform-municipalities">اعتماد البلديات</Link>
-            </Button>
-          )}
+
+
           <NotificationsMenu />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { AuthzError, requireMunicipalityAdmin } from "@/lib/authz.server";
+import { enforceRateLimit, RateLimitError } from "@/lib/rate-limit.server";
+import { RATE_LIMITS } from "@/lib/rate-limits";
 
 /**
  * Municipality-scoped user management. Endpoints here ALWAYS verify the
@@ -12,6 +14,15 @@ import { AuthzError, requireMunicipalityAdmin } from "@/lib/authz.server";
  */
 
 const admin: any = supabaseAdmin;
+
+function formatAlgiersHHMM(d: Date): string {
+  return new Intl.DateTimeFormat("ar-DZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Africa/Algiers",
+  }).format(d);
+}
 
 /** Returns the verified-municipality IDs the acting user super-administers. */
 async function getMySuperAdminMuniIds(userId: string): Promise<string[]> {
@@ -36,6 +47,26 @@ export const searchUsers = createServerFn({ method: "POST" })
     z.object({ q: z.string().trim().max(200).optional().default("") }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    // Rate limit: 20 searches / minute / user.
+    try {
+      await enforceRateLimit({
+        ...RATE_LIMITS.userSearchPerMinute,
+        userId: context.userId,
+      });
+    } catch (e) {
+      if (e instanceof RateLimitError) {
+        const reset = new Date(Date.now() + e.retryAfterSeconds * 1000);
+        return {
+          rows: [] as any[],
+          rateLimitMessage:
+            `لقد وصلت إلى الحد المسموح لعمليات البحث.\n` +
+            `يمكنك البحث مرة أخرى ابتداءً من ${formatAlgiersHHMM(reset)}.`,
+          rateLimitResetAt: reset.toISOString(),
+        };
+      }
+      throw e;
+    }
+
     // Limit returned profiles to members of municipalities the caller administers.
     const muniIds = await requireMunicipalityAdmin(context.userId);
     const { data: members } = await admin
@@ -45,7 +76,8 @@ export const searchUsers = createServerFn({ method: "POST" })
     const memberIds: string[] = Array.from(
       new Set((members ?? []).map((m: any) => m.user_id as string)),
     );
-    if (!memberIds.length) return [];
+    if (!memberIds.length)
+      return { rows: [] as any[], rateLimitMessage: null, rateLimitResetAt: null };
 
     let query = (supabaseAdmin as any)
       .from("profiles")
@@ -87,13 +119,13 @@ export const searchUsers = createServerFn({ method: "POST" })
         }
       }
     }
-    // Per-user muni role within actor's scope (for super_admin detection).
     const { data: memRoles } = await admin
       .from("municipality_members")
       .select("user_id, role, municipality_id")
       .in("municipality_id", muniIds)
       .in("user_id", ids);
     const muniRoleMap = new Map<string, "super_admin" | "admin" | "citizen">();
+    const muniIdByUser = new Map<string, string>();
     for (const m of (memRoles ?? []) as any[]) {
       const cur = muniRoleMap.get(m.user_id);
       if (
@@ -102,17 +134,22 @@ export const searchUsers = createServerFn({ method: "POST" })
         (m.role === "admin" && cur === "citizen")
       ) {
         muniRoleMap.set(m.user_id, m.role);
+        muniIdByUser.set(m.user_id, m.municipality_id);
+      } else if (!muniIdByUser.has(m.user_id)) {
+        muniIdByUser.set(m.user_id, m.municipality_id);
       }
     }
-    return (profiles ?? []).map((p: any) => ({
+    const rows = (profiles ?? []).map((p: any) => ({
       id: p.id,
       full_name: p.full_name,
       email: p.email,
       role: roleMap.get(p.id) ?? "citizen",
       municipality_role: muniRoleMap.get(p.id) ?? "citizen",
+      municipality_id: muniIdByUser.get(p.id) ?? muniIds[0] ?? null,
       department_id: deptMap.get(p.id)?.id ?? null,
       department_name: deptMap.get(p.id)?.name ?? null,
     }));
+    return { rows, rateLimitMessage: null as string | null, rateLimitResetAt: null as string | null };
   });
 
 export const changeUserRole = createServerFn({ method: "POST" })

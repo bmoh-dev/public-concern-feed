@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/i18n";
-import { AttachmentThumb } from "./_authenticated/my-complaints";
+import { AttachmentGroup } from "@/components/AttachmentLightbox";
 import { Search, List, Map as MapIcon } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
@@ -61,7 +61,7 @@ function FeedPage() {
   const [committed, setCommitted] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [wilaya, setWilaya] = useState<string>("all");
+  const [wilaya, setWilaya] = useState<string>("");
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session?.user));
@@ -80,9 +80,10 @@ function FeedPage() {
     new Set((municipalities as any[]).map((m) => m.wilaya).filter(Boolean)),
   ).sort((a, b) => String(a).localeCompare(String(b), "ar"));
 
-  const filteredMunis = (municipalities as any[]).filter(
-    (m) => wilaya === "all" || m.wilaya === wilaya,
-  );
+  const wilayaSelected = !!wilaya;
+  const filteredMunis = wilayaSelected
+    ? (municipalities as any[]).filter((m) => m.wilaya === wilaya)
+    : [];
 
   const municipalityId =
     searchMunicipality && filteredMunis.some((m) => m.id === searchMunicipality)
@@ -95,6 +96,7 @@ function FeedPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wilaya]);
+
 
   const category = tab === "all" ? null : (tab as any);
 
@@ -175,10 +177,9 @@ function FeedPage() {
             <label className="text-sm font-medium">الولاية</label>
             <Select value={wilaya} onValueChange={setWilaya}>
               <SelectTrigger>
-                <SelectValue placeholder="كل الولايات" />
+                <SelectValue placeholder="اختر ولاية" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">كل الولايات</SelectItem>
                 {wilayas.map((w) => (
                   <SelectItem key={String(w)} value={String(w)}>
                     {String(w)}
@@ -192,10 +193,12 @@ function FeedPage() {
             <Select
               value={municipalityId}
               onValueChange={(v) => navigate({ search: { m: v }, replace: true })}
-              disabled={filteredMunis.length === 0}
+              disabled={!wilayaSelected || filteredMunis.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder="اختر بلدية للعرض" />
+                <SelectValue
+                  placeholder={wilayaSelected ? "اختر بلدية للعرض" : "اختر ولاية أولاً"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredMunis.map((m: any) => (
@@ -210,11 +213,13 @@ function FeedPage() {
 
         {!municipalityId && (
           <div className="mt-6 rounded-xl border bg-card p-10 text-center text-muted-foreground">
-            {wilaya === "all"
-              ? "اختر بلدية لعرض الشكاوى."
+            {!wilayaSelected
+              ? "اختر ولاية أولاً لعرض البلديات."
               : "لا توجد بلديات موثّقة في هذه الولاية."}
           </div>
         )}
+
+
 
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -332,12 +337,12 @@ function FeedPage() {
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm">{c.description}</p>
                     {c.attachments?.length > 0 && (
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {c.attachments.map((a: any) => (
-                          <AttachmentThumb key={a.id} a={a} />
-                        ))}
-                      </div>
+                      <AttachmentGroup
+                        attachments={c.attachments}
+                        className="mt-3 grid grid-cols-3 gap-2"
+                      />
                     )}
+
                   </article>
 
                 );
@@ -368,12 +373,12 @@ function FeedPage() {
                 </p>
                 <p className="mt-2 whitespace-pre-wrap text-sm">{c.description}</p>
                 {c.attachments?.length > 0 && (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {c.attachments.map((a: any) => (
-                      <AttachmentThumb key={a.id} a={a} />
-                    ))}
-                  </div>
+                  <AttachmentGroup
+                    attachments={c.attachments}
+                    className="mt-3 grid grid-cols-3 gap-2"
+                  />
                 )}
+
               </article>
             ))}
           </div>

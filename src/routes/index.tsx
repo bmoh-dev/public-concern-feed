@@ -1,7 +1,10 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ListChecks, FileText, Bell } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
+import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,9 +22,16 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session?.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setIsAuthed(!!s?.user));
+    return () => sub.subscription.unsubscribe();
+  }, []);
   return (
     <div className="min-h-screen bg-background">
-      <PublicHeader />
+      {isAuthed ? <AuthenticatedHeader /> : <PublicHeader />}
+
       <main>
         <section className="border-b bg-gradient-to-b from-accent/40 to-background">
           <div className="container mx-auto max-w-6xl px-6 py-20 text-center">

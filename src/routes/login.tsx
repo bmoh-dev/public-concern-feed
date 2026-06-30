@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { getMyRole } from "@/lib/notifications.functions";
+
 import { getMyOnboardingState } from "@/lib/municipalities.functions";
 
 export const Route = createFileRoute("/login")({
@@ -96,12 +97,15 @@ function LoginPage() {
         >
           <GoogleIcon /> <span className="ms-2">المتابعة باستخدام Google</span>
         </Button>
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          بالعودة إلى{" "}
-          <Link to="/" className="underline">
-            الصفحة الرئيسية
-          </Link>
-        </p>
+        <div className="mt-6 flex justify-center">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/">
+              <ArrowRight className="ms-1 h-4 w-4" />
+              العودة إلى الصفحة الرئيسية
+            </Link>
+          </Button>
+        </div>
+
       </div>
     </div>
   );
