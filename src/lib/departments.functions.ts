@@ -150,7 +150,11 @@ export const departmentUpdateComplaint = createServerFn({ method: "POST" })
 
     const patch: any = {};
     if (data.status) patch.status = data.status;
-    if (data.internal_notes !== undefined) patch.internal_notes = data.internal_notes;
+    // Only municipality admins may write internal_notes. Department admins
+    // operate strictly on status.
+    if (data.internal_notes !== undefined && isMuniAdmin) {
+      patch.internal_notes = data.internal_notes;
+    }
     if (!Object.keys(patch).length) return { ok: true };
     const { error } = await admin.from("complaints").update(patch).eq("id", data.id);
     if (error) {
