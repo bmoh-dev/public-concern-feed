@@ -37,8 +37,10 @@ export const getPlatformBootstrapState = createServerFn({ method: "GET" })
 export const bootstrapGlobalAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
-    const { error } = await (supabase as any).rpc("bootstrap_global_admin");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any).rpc("bootstrap_global_admin", {
+      p_caller: context.userId,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -47,8 +49,9 @@ export const promoteGlobalAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ target_user: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { error } = await (supabase as any).rpc("promote_global_admin", {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any).rpc("promote_global_admin", {
+      p_caller: context.userId,
       target_user: data.target_user,
     });
     if (error) throw new Error(error.message);
@@ -70,7 +73,8 @@ export const promoteGlobalAdminByEmail = createServerFn({ method: "POST" })
       .maybeSingle();
     if (pErr) throw new Error(pErr.message);
     if (!prof) throw new Error("لم يتم العثور على المستخدم");
-    const { error } = await (supabase as any).rpc("promote_global_admin", {
+    const { error } = await admin.rpc("promote_global_admin", {
+      p_caller: userId,
       target_user: prof.id,
     });
     if (error) throw new Error(error.message);
@@ -80,8 +84,10 @@ export const promoteGlobalAdminByEmail = createServerFn({ method: "POST" })
 export const abandonGlobalAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
-    const { error } = await (supabase as any).rpc("abandon_global_admin");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any).rpc("abandon_global_admin", {
+      p_caller: context.userId,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -102,7 +108,8 @@ export const transferGlobalAdminByEmail = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
     if (!prof) throw new Error("لم يتم العثور على المستخدم");
     if (prof.id === userId) throw new Error("لا يمكن نقل المسؤولية إلى نفسك");
-    const { error } = await (supabase as any).rpc("transfer_global_admin", {
+    const { error } = await admin.rpc("transfer_global_admin", {
+      p_caller: userId,
       target_user: prof.id,
     });
     if (error) throw new Error(error.message);
