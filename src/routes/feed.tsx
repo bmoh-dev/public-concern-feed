@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES } from "@/lib/i18n";
-import { AttachmentThumb } from "./_authenticated/my-complaints";
+import { AttachmentGroup } from "@/components/AttachmentLightbox";
 import { Search, List, Map as MapIcon } from "lucide-react";
 import { PublicHeader } from "@/components/PublicHeader";
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
