@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { AuthzError, requireMunicipalityAdmin } from "@/lib/authz.server";
+import { enforceRateLimit, RateLimitError } from "@/lib/rate-limit.server";
+import { RATE_LIMITS } from "@/lib/rate-limits";
 
 /**
  * Municipality-scoped user management. Endpoints here ALWAYS verify the
@@ -12,6 +14,15 @@ import { AuthzError, requireMunicipalityAdmin } from "@/lib/authz.server";
  */
 
 const admin: any = supabaseAdmin;
+
+function formatAlgiersHHMM(d: Date): string {
+  return new Intl.DateTimeFormat("ar-DZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Africa/Algiers",
+  }).format(d);
+}
 
 /** Returns the verified-municipality IDs the acting user super-administers. */
 async function getMySuperAdminMuniIds(userId: string): Promise<string[]> {
