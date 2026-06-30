@@ -61,7 +61,7 @@ function FeedPage() {
   const [committed, setCommitted] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [wilaya, setWilaya] = useState<string>("all");
+  const [wilaya, setWilaya] = useState<string>("");
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session?.user));
@@ -80,9 +80,10 @@ function FeedPage() {
     new Set((municipalities as any[]).map((m) => m.wilaya).filter(Boolean)),
   ).sort((a, b) => String(a).localeCompare(String(b), "ar"));
 
-  const filteredMunis = (municipalities as any[]).filter(
-    (m) => wilaya === "all" || m.wilaya === wilaya,
-  );
+  const wilayaSelected = !!wilaya;
+  const filteredMunis = wilayaSelected
+    ? (municipalities as any[]).filter((m) => m.wilaya === wilaya)
+    : [];
 
   const municipalityId =
     searchMunicipality && filteredMunis.some((m) => m.id === searchMunicipality)
@@ -95,6 +96,7 @@ function FeedPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wilaya]);
+
 
   const category = tab === "all" ? null : (tab as any);
 
