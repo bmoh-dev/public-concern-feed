@@ -179,13 +179,13 @@ function ComplaintDetailDialog({ id, onClose }: { id: string | null; onClose: ()
             {data.attachments?.length > 0 && (
               <div>
                 <h4 className="mb-2 text-sm font-semibold">المرفقات</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {data.attachments.map((a: any) => (
-                    <AttachmentThumb key={a.id} a={a} />
-                  ))}
-                </div>
+                <AttachmentGroup
+                  attachments={data.attachments}
+                  className="grid grid-cols-3 gap-2"
+                />
               </div>
             )}
+
           </div>
         )}
       </DialogContent>
