@@ -119,13 +119,13 @@ function DepartmentPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
                   جارٍ التحميل...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
                   لا توجد شكاوى في قسمك.
                 </td>
               </tr>
@@ -148,9 +148,6 @@ function DepartmentPage() {
                   </td>
                   <td className="p-3 text-muted-foreground">
                     {new Date(r.created_at).toLocaleDateString("ar")}
-                  </td>
-                  <td className="p-3 text-xs text-muted-foreground line-clamp-1 max-w-xs">
-                    {r.internal_notes ?? "—"}
                   </td>
                 </tr>
               ))
