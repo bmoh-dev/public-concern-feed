@@ -114,7 +114,6 @@ function DepartmentPage() {
               <th className="p-3">الفئة</th>
               <th className="p-3">الحالة</th>
               <th className="p-3">التاريخ</th>
-              <th className="p-3">ملاحظات</th>
             </tr>
           </thead>
           <tbody>
