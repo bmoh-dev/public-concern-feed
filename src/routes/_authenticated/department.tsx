@@ -114,19 +114,18 @@ function DepartmentPage() {
               <th className="p-3">الفئة</th>
               <th className="p-3">الحالة</th>
               <th className="p-3">التاريخ</th>
-              <th className="p-3">ملاحظات</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
                   جارٍ التحميل...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
                   لا توجد شكاوى في قسمك.
                 </td>
               </tr>
@@ -150,9 +149,6 @@ function DepartmentPage() {
                   <td className="p-3 text-muted-foreground">
                     {new Date(r.created_at).toLocaleDateString("ar")}
                   </td>
-                  <td className="p-3 text-xs text-muted-foreground line-clamp-1 max-w-xs">
-                    {r.internal_notes ?? "—"}
-                  </td>
                 </tr>
               ))
             )}
@@ -173,13 +169,11 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
   const qc = useQueryClient();
   const updateFn = useServerFn(departmentUpdateComplaint);
   const [status, setStatus] = useState<string>(row?.status ?? "pending");
-  const [notes, setNotes] = useState<string>(row?.internal_notes ?? "");
   const [saving, setSaving] = useState(false);
 
   useMemo(() => {
     if (row) {
       setStatus(row.status);
-      setNotes(row.internal_notes ?? "");
     }
   }, [row]);
 
@@ -187,7 +181,7 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
     if (!id) return;
     setSaving(true);
     try {
-      await updateFn({ data: { id, status: status as any, internal_notes: notes } });
+      await updateFn({ data: { id, status: status as any } });
       toast.success("تم الحفظ");
       qc.invalidateQueries({ queryKey: ["dept-complaints"] });
       onClose();
@@ -232,10 +226,6 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">ملاحظات داخلية</label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
             </div>
             <Button onClick={save} disabled={saving} className="w-full">
               {saving ? "جارٍ الحفظ..." : "حفظ"}

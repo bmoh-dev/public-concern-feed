@@ -89,7 +89,7 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
     let q = admin
       .from("complaints")
       .select(
-        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, municipality_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, created_at, user_id, assigned_department_id, municipality_id, attachments(id, storage_path, file_name, mime_type)",
       )
       .eq("assigned_department_id", info.department_id)
       // Defense in depth: department belongs to one municipality.
@@ -150,7 +150,11 @@ export const departmentUpdateComplaint = createServerFn({ method: "POST" })
 
     const patch: any = {};
     if (data.status) patch.status = data.status;
-    if (data.internal_notes !== undefined) patch.internal_notes = data.internal_notes;
+    // Only municipality admins may write internal_notes. Department admins
+    // operate strictly on status.
+    if (data.internal_notes !== undefined && isMuniAdmin) {
+      patch.internal_notes = data.internal_notes;
+    }
     if (!Object.keys(patch).length) return { ok: true };
     const { error } = await admin.from("complaints").update(patch).eq("id", data.id);
     if (error) {

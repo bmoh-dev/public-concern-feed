@@ -492,10 +492,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      abandon_global_admin: { Args: never; Returns: undefined }
-      bootstrap_global_admin: { Args: never; Returns: undefined }
+      abandon_global_admin: { Args: { p_caller: string }; Returns: undefined }
+      bootstrap_global_admin: { Args: { p_caller: string }; Returns: undefined }
       promote_global_admin: {
-        Args: { target_user: string }
+        Args: { p_caller: string; target_user: string }
         Returns: undefined
       }
       rl_check_and_consume:
@@ -522,7 +522,7 @@ export type Database = {
           }
       rl_cleanup_old: { Args: never; Returns: undefined }
       transfer_global_admin: {
-        Args: { target_user: string }
+        Args: { p_caller: string; target_user: string }
         Returns: undefined
       }
     }
