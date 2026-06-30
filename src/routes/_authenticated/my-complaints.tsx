@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABELS, STATUS_LABELS, STATUS_BADGE, CATEGORIES, STATUSES } from "@/lib/i18n";
 import { Search } from "lucide-react";
+import { AttachmentGroup } from "@/components/AttachmentLightbox";
+
 
 
 export const Route = createFileRoute("/_authenticated/my-complaints")({
