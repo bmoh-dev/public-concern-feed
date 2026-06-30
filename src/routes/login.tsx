@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { getMyRole } from "@/lib/notifications.functions";
+
 import { getMyOnboardingState } from "@/lib/municipalities.functions";
 
 export const Route = createFileRoute("/login")({
