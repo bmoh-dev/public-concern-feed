@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   searchUsers,
   changeUserRole,
-  muniListSuperAdmins,
   muniPromoteSuperAdminByEmail,
   muniDemoteToCitizen,
   muniTransferSuperAdminByEmail,
@@ -34,8 +33,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, MoreHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   beforeLoad: ({ location }) => requireAdminRoute(location),
@@ -56,9 +62,24 @@ type Row = {
   email: string | null;
   role: "global_admin" | "super_admin" | "admin" | "citizen";
   municipality_role: "super_admin" | "admin" | "citizen";
+  municipality_id: string | null;
   department_id: string | null;
   department_name: string | null;
 };
+
+type SearchResponse = {
+  rows: Row[];
+  rateLimitMessage: string | null;
+  rateLimitResetAt: string | null;
+};
+
+type PendingAction =
+  | { kind: "promote-admin"; user: Row }
+  | { kind: "demote-admin"; user: Row }
+  | { kind: "promote-super"; user: Row }
+  | { kind: "demote-super"; user: Row }
+  | { kind: "transfer-super"; user: Row }
+  | { kind: "abandon-super" };
 
 function AdminUsersPage() {
   const qc = useQueryClient();
@@ -67,6 +88,10 @@ function AdminUsersPage() {
   const setDeptFn = useServerFn(setDepartmentAdmin);
   const deptsFn = useServerFn(listDepartments);
   const roleFn = useServerFn(getMyRole);
+  const promoteSuperFn = useServerFn(muniPromoteSuperAdminByEmail);
+  const demoteFn = useServerFn(muniDemoteToCitizen);
+  const transferFn = useServerFn(muniTransferSuperAdminByEmail);
+  const abandonFn = useServerFn(muniAbandonSuperAdmin);
 
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
   const myMunicipalities = (role?.municipalities ?? []).filter(
@@ -77,36 +102,43 @@ function AdminUsersPage() {
 
   const [input, setInput] = useState("");
   const [q, setQ] = useState("");
-  const [pending, setPending] = useState<Row | null>(null);
+  const [pending, setPending] = useState<PendingAction | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const { data: rows = [], isLoading } = useQuery({
+  // Cooldown UX driven by server-side rate-limit response.
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [cooldownUntil]);
+  const cooling = !!(cooldownUntil && cooldownUntil > now);
+  useEffect(() => {
+    if (cooldownUntil && cooldownUntil <= now) setCooldownUntil(null);
+  }, [cooldownUntil, now]);
+
+  const { data, isLoading } = useQuery<SearchResponse>({
     queryKey: ["admin-users", q],
-    queryFn: () => searchFn({ data: { q } }) as Promise<Row[]>,
+    queryFn: () => searchFn({ data: { q } }) as Promise<SearchResponse>,
+    enabled: !cooling,
   });
+  const rows: Row[] = data?.rows ?? [];
+  useEffect(() => {
+    const resetAt = data?.rateLimitResetAt;
+    if (resetAt) {
+      const t = new Date(resetAt).getTime();
+      if (t > Date.now()) setCooldownUntil(t);
+    }
+  }, [data?.rateLimitResetAt]);
+  const rateLimitMessage = data?.rateLimitMessage ?? null;
+
   const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooling) return;
     setQ(input.trim());
-  };
-
-  const confirmChange = async () => {
-    if (!pending) return;
-    setBusy(true);
-    try {
-      const action = pending.role === "admin" ? "demote" : "promote";
-      await changeFn({ data: { target_user_id: pending.id, action } });
-      toast.success(
-        action === "promote" ? "تمت ترقية المستخدم إلى مسؤول عام" : "تم تخفيض المستخدم إلى مواطن",
-      );
-      setPending(null);
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (err: any) {
-      toast.error(err?.message ?? "فشل تنفيذ الإجراء");
-    } finally {
-      setBusy(false);
-    }
   };
 
   const onDeptChange = async (user: Row, value: string) => {
@@ -120,8 +152,91 @@ function AdminUsersPage() {
     }
   };
 
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["admin-users"] });
+    qc.invalidateQueries({ queryKey: ["my-role"] });
+  };
+
+  const confirmPending = async () => {
+    if (!pending) return;
+    setBusy(true);
+    try {
+      if (pending.kind === "promote-admin") {
+        await changeFn({ data: { target_user_id: pending.user.id, action: "promote" } });
+        toast.success("تمت ترقية المستخدم إلى مسؤول عام");
+      } else if (pending.kind === "demote-admin") {
+        await changeFn({ data: { target_user_id: pending.user.id, action: "demote" } });
+        toast.success("تم تخفيض المستخدم إلى مواطن");
+      } else if (pending.kind === "promote-super") {
+        if (!pending.user.email) throw new Error("لا يوجد بريد إلكتروني");
+        if (!activeMuni) throw new Error("لا توجد بلدية نشطة");
+        await promoteSuperFn({
+          data: { municipality_id: activeMuni.id, email: pending.user.email },
+        });
+        toast.success("تمت الترقية إلى مسؤول بلدية أعلى");
+      } else if (pending.kind === "demote-super") {
+        if (!activeMuni) throw new Error("لا توجد بلدية نشطة");
+        await demoteFn({
+          data: { municipality_id: activeMuni.id, target_user_id: pending.user.id },
+        });
+        toast.success("تم التخفيض");
+      } else if (pending.kind === "transfer-super") {
+        if (!pending.user.email) throw new Error("لا يوجد بريد إلكتروني");
+        if (!activeMuni) throw new Error("لا توجد بلدية نشطة");
+        await transferFn({
+          data: { municipality_id: activeMuni.id, email: pending.user.email },
+        });
+        toast.success("تم نقل المسؤولية");
+      } else if (pending.kind === "abandon-super") {
+        if (!activeMuni) throw new Error("لا توجد بلدية نشطة");
+        await abandonFn({ data: { municipality_id: activeMuni.id } });
+        toast.success("تم التخلي عن دور المسؤول الأعلى");
+      }
+      setPending(null);
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل تنفيذ الإجراء");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dialogText = (() => {
+    if (!pending) return { title: "", desc: "" };
+    const email = "user" in pending ? pending.user.email ?? "هذا المستخدم" : "";
+    switch (pending.kind) {
+      case "promote-admin":
+        return { title: "ترقية إلى مسؤول عام", desc: `هل أنت متأكد من ترقية ${email}؟` };
+      case "demote-admin":
+        return {
+          title: "إزالة دور المسؤول العام",
+          desc: `هل أنت متأكد من إزالة دور المسؤول العام عن ${email}؟`,
+        };
+      case "promote-super":
+        return {
+          title: "ترقية إلى مسؤول بلدية أعلى",
+          desc: `سيتم ترقية ${email} إلى مسؤول بلدية أعلى.`,
+        };
+      case "demote-super":
+        return {
+          title: "تخفيض المسؤول الأعلى",
+          desc: `سيتم إزالة دور المسؤول الأعلى عن ${email}.`,
+        };
+      case "transfer-super":
+        return {
+          title: "نقل المسؤولية",
+          desc: `سيتم ترقية ${email} إلى مسؤول أعلى وسحب صلاحياتك مباشرة.`,
+        };
+      case "abandon-super":
+        return {
+          title: "التخلي عن المسؤولية",
+          desc: "ستفقد صلاحيات المسؤول الأعلى لهذه البلدية. لا يمكن التراجع إلا بترقيتك من قِبل مسؤول آخر.",
+        };
+    }
+  })();
+
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-8" dir="rtl">
+    <div className="container mx-auto p-4 md:p-6 space-y-6" dir="rtl">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">إدارة المستخدمين</h1>
@@ -136,32 +251,29 @@ function AdminUsersPage() {
         </Button>
       </div>
 
-      {isSuperHere && activeMuni && (
-        <MunicipalitySuperAdminSection
-          municipalityId={activeMuni.id}
-          municipalityName={`${activeMuni.name} — ${activeMuni.wilaya}`}
-        />
-      )}
-
       <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold">المستخدمون في البلدية</h2>
-          <p className="text-xs text-muted-foreground">
-            البحث يقتصر على المستخدمين المسجّلين في بلديتك فقط.
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          البحث يقتصر على المستخدمين المسجّلين في بلديتك فقط.
+        </p>
         <form onSubmit={submit} className="flex gap-2 max-w-xl">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="ابحث بالبريد الإلكتروني..."
             maxLength={200}
+            disabled={cooling}
           />
-          <Button type="submit">
+          <Button type="submit" disabled={cooling}>
             <Search className="h-4 w-4 ml-2" />
             بحث
           </Button>
         </form>
+
+        {rateLimitMessage && (
+          <div className="whitespace-pre-line rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            {rateLimitMessage}
+          </div>
+        )}
 
         <div className="border rounded-lg overflow-hidden bg-card">
           <div className="overflow-x-auto">
@@ -172,7 +284,7 @@ function AdminUsersPage() {
                   <th className="p-3 font-medium">البريد</th>
                   <th className="p-3 font-medium">الدور</th>
                   <th className="p-3 font-medium">القسم</th>
-                  <th className="p-3 font-medium">الإجراء</th>
+                  <th className="p-3 font-medium">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -187,84 +299,21 @@ function AdminUsersPage() {
                   <tr>
                     <td colSpan={5} className="p-10 text-center text-muted-foreground">
                       {q
-                        ? "لا توجد نتائج مطابقة لبحثك."
+                        ? "لم يتم العثور على أي مستخدم بهذا البريد الإلكتروني داخل بلديتك."
                         : "ابحث ببريد إلكتروني لعرض المستخدمين."}
                     </td>
                   </tr>
                 ) : (
-                  rows.map((u) => {
-                    const isDeptAdmin = !!u.department_id;
-                    const isGlobalAdmin = u.role === "global_admin";
-                    const isSuperAdmin =
-                      u.role === "super_admin" || u.municipality_role === "super_admin";
-                    const isGeneral = u.role === "admin";
-                    return (
-                      <tr key={u.id} className="border-t">
-                        <td className="p-3">{u.full_name || "—"}</td>
-                        <td className="p-3" dir="ltr">
-                          {u.email || "—"}
-                        </td>
-                        <td className="p-3">
-                          <Badge
-                            variant={
-                              isGlobalAdmin || isSuperAdmin || isGeneral
-                                ? "default"
-                                : isDeptAdmin
-                                  ? "secondary"
-                                  : "outline"
-                            }
-                          >
-                            {isGlobalAdmin
-                              ? "مسؤول المنصة"
-                              : isSuperAdmin
-                                ? "مسؤول بلدية أعلى"
-                                : isGeneral
-                                  ? "مسؤول عام"
-                                  : isDeptAdmin
-                                    ? "مسؤول قسم"
-                                    : "مواطن"}
-                          </Badge>
-                        </td>
-                        <td className="p-3">
-                          {isGeneral || isSuperAdmin || isGlobalAdmin ? (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          ) : (
-                            <Select
-                              value={u.department_id ?? "none"}
-                              onValueChange={(v) => onDeptChange(u, v)}
-                            >
-                              <SelectTrigger className="w-44">
-                                <SelectValue placeholder="—" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">— بدون —</SelectItem>
-                                {(depts as any[]).map((d) => (
-                                  <SelectItem key={d.id} value={d.id}>
-                                    {d.name_ar}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          {isGlobalAdmin || isSuperAdmin ? (
-                            <span className="text-xs text-muted-foreground">
-                              يُدار من القسم العلوي
-                            </span>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant={isGeneral ? "outline" : "default"}
-                              onClick={() => setPending(u)}
-                            >
-                              {isGeneral ? "إزالة الإدارة العامة" : "ترقية إلى مسؤول عام"}
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
+                  rows.map((u) => (
+                    <UserRow
+                      key={u.id}
+                      u={u}
+                      isSuperHere={isSuperHere}
+                      depts={depts as any[]}
+                      onDeptChange={onDeptChange}
+                      onAction={setPending}
+                    />
+                  ))
                 )}
               </tbody>
             </table>
@@ -275,16 +324,18 @@ function AdminUsersPage() {
       <AlertDialog open={!!pending} onOpenChange={(o) => !o && setPending(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد تغيير الدور</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pending?.role === "admin"
-                ? `هل أنت متأكد من إزالة دور المسؤول العام عن ${pending?.email}؟`
-                : `هل أنت متأكد من ترقية ${pending?.email} إلى مسؤول عام؟`}
-            </AlertDialogDescription>
+            <AlertDialogTitle>{dialogText.title}</AlertDialogTitle>
+            <AlertDialogDescription>{dialogText.desc}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmChange} disabled={busy}>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmPending();
+              }}
+              disabled={busy}
+            >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "تأكيد"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -294,292 +345,134 @@ function AdminUsersPage() {
   );
 }
 
-function MunicipalitySuperAdminSection({
-  municipalityId,
-  municipalityName,
+function UserRow({
+  u,
+  isSuperHere,
+  depts,
+  onDeptChange,
+  onAction,
 }: {
-  municipalityId: string;
-  municipalityName: string;
+  u: Row;
+  isSuperHere: boolean;
+  depts: any[];
+  onDeptChange: (u: Row, v: string) => void;
+  onAction: (p: PendingAction) => void;
 }) {
-  const qc = useQueryClient();
-  const listFn = useServerFn(muniListSuperAdmins);
-  const promoteFn = useServerFn(muniPromoteSuperAdminByEmail);
-  const demoteFn = useServerFn(muniDemoteToCitizen);
-  const transferFn = useServerFn(muniTransferSuperAdminByEmail);
-  const abandonFn = useServerFn(muniAbandonSuperAdmin);
+  const isDeptAdmin = !!u.department_id;
+  const isGlobalAdmin = u.role === "global_admin";
+  const isSuperAdmin = u.role === "super_admin" || u.municipality_role === "super_admin";
+  const isGeneral = u.role === "admin";
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["muni-super-admins", municipalityId],
-    queryFn: () => listFn({ data: { municipality_id: municipalityId } }),
-  });
+  const roleLabel = isGlobalAdmin
+    ? "مسؤول المنصة"
+    : isSuperAdmin
+      ? "مسؤول بلدية أعلى"
+      : isGeneral
+        ? "مسؤول عام"
+        : isDeptAdmin
+          ? "مسؤول قسم"
+          : "مواطن";
 
-  const admins = data?.admins ?? [];
-  const selfIsLast = admins.length === 1 && admins[0]?.is_self;
-
-  const [promoteEmail, setPromoteEmail] = useState("");
-  const [busyPromote, setBusyPromote] = useState(false);
-  const [transferEmail, setTransferEmail] = useState("");
-  const [confirmTransfer, setConfirmTransfer] = useState(false);
-  const [busyTransfer, setBusyTransfer] = useState(false);
-  const [confirmAbandon, setConfirmAbandon] = useState(false);
-  const [busyAbandon, setBusyAbandon] = useState(false);
-  const [demoteTarget, setDemoteTarget] = useState<{ user_id: string; email: string | null } | null>(
-    null,
-  );
-  const [busyDemote, setBusyDemote] = useState(false);
-
-  const refresh = () => {
-    qc.invalidateQueries({ queryKey: ["muni-super-admins", municipalityId] });
-    qc.invalidateQueries({ queryKey: ["admin-users"] });
-    qc.invalidateQueries({ queryKey: ["my-role"] });
-  };
-
-  const handlePromote = async () => {
-    const email = promoteEmail.trim();
-    if (!email) return toast.error("أدخل بريداً إلكترونياً");
-    setBusyPromote(true);
-    try {
-      await promoteFn({ data: { municipality_id: municipalityId, email } });
-      toast.success("تمت الترقية إلى مسؤول بلدية أعلى");
-      setPromoteEmail("");
-      refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? "فشلت الترقية");
-    } finally {
-      setBusyPromote(false);
-    }
-  };
-
-  const handleDemote = async () => {
-    if (!demoteTarget) return;
-    setBusyDemote(true);
-    try {
-      await demoteFn({
-        data: { municipality_id: municipalityId, target_user_id: demoteTarget.user_id },
-      });
-      toast.success("تم تخفيض المسؤول إلى مواطن");
-      setDemoteTarget(null);
-      refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? "فشل التخفيض");
-    } finally {
-      setBusyDemote(false);
-    }
-  };
-
-  const handleTransfer = async () => {
-    const email = transferEmail.trim();
-    if (!email) return toast.error("أدخل بريداً إلكترونياً");
-    setBusyTransfer(true);
-    try {
-      await transferFn({ data: { municipality_id: municipalityId, email } });
-      toast.success("تم نقل المسؤولية");
-      setConfirmTransfer(false);
-      setTransferEmail("");
-      refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? "تعذّر نقل المسؤولية");
-    } finally {
-      setBusyTransfer(false);
-    }
-  };
-
-  const handleAbandon = async () => {
-    setBusyAbandon(true);
-    try {
-      await abandonFn({ data: { municipality_id: municipalityId } });
-      toast.success("تم التخلي عن دور المسؤول الأعلى");
-      setConfirmAbandon(false);
-      refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? "تعذّر التخلي");
-    } finally {
-      setBusyAbandon(false);
-    }
-  };
+  // Action availability:
+  // - Only super-admins of this municipality can promote/demote super-admin role.
+  // - Anyone (admin or super) can promote a citizen to general admin or set a department.
+  // - Cannot touch global admins via this page.
+  const canManage = !isGlobalAdmin;
 
   return (
-    <section className="rounded-xl border bg-card p-5 space-y-5">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-lg font-semibold">مسؤولو البلدية الأعلى</h2>
-          <p className="text-xs text-muted-foreground mt-1">{municipalityName}</p>
-        </div>
-        <Badge variant="outline">{admins.length} مسؤول</Badge>
-      </div>
-
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>
-      ) : admins.length === 0 ? (
-        <p className="text-sm text-muted-foreground">لا يوجد مسؤولون أعلى مسجّلون.</p>
-      ) : (
-        <ul className="divide-y rounded-lg border">
-          {admins.map((a: { user_id: string; full_name: string | null; email: string | null; is_self: boolean }) => {
-            const displayName = a.full_name || a.email || "مستخدم";
-            const showEmail = a.email && a.email !== displayName;
-            return (
-              <li
-                key={a.user_id}
-                className="flex items-center justify-between gap-3 p-3 flex-wrap"
-              >
-                <div>
-                  <div className="font-medium">
-                    {displayName}
-                    {a.is_self && (
-                      <Badge variant="secondary" className="ms-2 text-[10px]">
-                        أنت
-                      </Badge>
-                    )}
-                  </div>
-                  {showEmail && (
-                    <div className="text-xs text-muted-foreground mt-0.5" dir="ltr">
-                      {a.email}
-                    </div>
-                  )}
-                </div>
-                {!a.is_self && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDemoteTarget({ user_id: a.user_id, email: a.email })}
-                  >
-                    تخفيض إلى مواطن
-                  </Button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border p-4 space-y-2">
-          <h3 className="font-semibold">ترقية إلى مسؤول أعلى</h3>
-          <p className="text-xs text-muted-foreground">
-            يجب أن يكون المستخدم عضواً في هذه البلدية.
-          </p>
-          <div className="flex gap-2 flex-wrap">
-            <Input
-              type="email"
-              placeholder="user@example.com"
-              value={promoteEmail}
-              onChange={(e) => setPromoteEmail(e.target.value)}
-              disabled={busyPromote}
-              className="max-w-xs"
-            />
-            <Button onClick={handlePromote} disabled={busyPromote || !promoteEmail.trim()}>
-              {busyPromote ? "جارٍ..." : "ترقية"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="rounded-lg border p-4 space-y-2">
-          <h3 className="font-semibold">نقل المسؤولية</h3>
-          <p className="text-xs text-muted-foreground">
-            يرقي المستلم إلى مسؤول أعلى ثم يخفّضك تلقائياً.
-          </p>
-          <div className="flex gap-2 flex-wrap">
-            <Input
-              type="email"
-              placeholder="user@example.com"
-              value={transferEmail}
-              onChange={(e) => setTransferEmail(e.target.value)}
-              disabled={busyTransfer}
-              className="max-w-xs"
-            />
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmTransfer(true)}
-              disabled={busyTransfer || !transferEmail.trim()}
-            >
-              نقل
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-destructive/30 p-4 space-y-2">
-        <h3 className="font-semibold">التخلي عن المسؤولية</h3>
-        <p className="text-xs text-muted-foreground">
-          متاح فقط إذا كان هناك مسؤول أعلى آخر للبلدية.
-        </p>
-        <Button
-          variant="destructive"
-          disabled={selfIsLast || busyAbandon}
-          onClick={() => setConfirmAbandon(true)}
+    <tr className="border-t">
+      <td className="p-3">{u.full_name || "—"}</td>
+      <td className="p-3" dir="ltr">
+        {u.email || "—"}
+      </td>
+      <td className="p-3">
+        <Badge
+          variant={
+            isGlobalAdmin || isSuperAdmin || isGeneral
+              ? "default"
+              : isDeptAdmin
+                ? "secondary"
+                : "outline"
+          }
         >
-          التخلي عن دور المسؤول الأعلى
-        </Button>
-        {selfIsLast && (
-          <p className="text-xs text-destructive">
-            لا يمكنك التخلي لأنك آخر مسؤول أعلى لهذه البلدية. قم بترقية مستخدم آخر أولاً.
-          </p>
+          {roleLabel}
+        </Badge>
+      </td>
+      <td className="p-3">
+        {isGeneral || isSuperAdmin || isGlobalAdmin ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : (
+          <Select
+            value={u.department_id ?? "none"}
+            onValueChange={(v) => onDeptChange(u, v)}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">— بدون —</SelectItem>
+              {depts.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.name_ar}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
-      </div>
-
-      <AlertDialog open={!!demoteTarget} onOpenChange={(o) => !o && setDemoteTarget(null)}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد التخفيض</AlertDialogTitle>
-            <AlertDialogDescription>
-              سيتم إزالة دور المسؤول الأعلى عن {demoteTarget?.email ?? "هذا المستخدم"}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyDemote}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDemote} disabled={busyDemote}>
-              {busyDemote ? "جارٍ..." : "تأكيد"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmTransfer} onOpenChange={setConfirmTransfer}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد نقل المسؤولية</AlertDialogTitle>
-            <AlertDialogDescription>
-              سيتم ترقية {transferEmail || "المستلم"} إلى مسؤول أعلى وسحب صلاحياتك مباشرة.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyTransfer}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={busyTransfer}
-              onClick={(e) => {
-                e.preventDefault();
-                handleTransfer();
-              }}
-            >
-              {busyTransfer ? "جارٍ..." : "تأكيد النقل"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmAbandon} onOpenChange={setConfirmAbandon}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد التخلي</AlertDialogTitle>
-            <AlertDialogDescription>
-              ستفقد صلاحيات المسؤول الأعلى لهذه البلدية. لا يمكن التراجع إلا بترقيتك من قِبل
-              مسؤول آخر.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyAbandon}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={busyAbandon}
-              onClick={(e) => {
-                e.preventDefault();
-                handleAbandon();
-              }}
-            >
-              {busyAbandon ? "جارٍ..." : "تأكيد"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </section>
+      </td>
+      <td className="p-3">
+        {!canManage ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="ms-1">إجراءات</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" dir="rtl">
+              {!isSuperAdmin && !isGeneral && (
+                <DropdownMenuItem onClick={() => onAction({ kind: "promote-admin", user: u })}>
+                  ترقية إلى مسؤول عام
+                </DropdownMenuItem>
+              )}
+              {isGeneral && (
+                <DropdownMenuItem onClick={() => onAction({ kind: "demote-admin", user: u })}>
+                  إزالة الإدارة العامة
+                </DropdownMenuItem>
+              )}
+              {isSuperHere && !isSuperAdmin && (
+                <DropdownMenuItem onClick={() => onAction({ kind: "promote-super", user: u })}>
+                  ترقية إلى مسؤول بلدية أعلى
+                </DropdownMenuItem>
+              )}
+              {isSuperHere && isSuperAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onAction({ kind: "transfer-super", user: u })}
+                  >
+                    نقل المسؤولية إلى هذا المستخدم
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => onAction({ kind: "demote-super", user: u })}
+                  >
+                    تخفيض من مسؤول أعلى
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => onAction({ kind: "abandon-super" })}
+                  >
+                    التخلي عن دوري كمسؤول أعلى
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </td>
+    </tr>
   );
 }
