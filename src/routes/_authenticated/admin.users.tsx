@@ -431,7 +431,7 @@ function UserRow({
                 <span className="ms-1">إجراءات</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" dir="rtl">
+            <DropdownMenuContent align="end">
               {!isSuperAdmin && !isGeneral && (
                 <DropdownMenuItem onClick={() => onAction({ kind: "promote-admin", user: u })}>
                   ترقية إلى مسؤول عام
