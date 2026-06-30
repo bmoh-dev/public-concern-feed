@@ -89,7 +89,7 @@ export const listDepartmentComplaints = createServerFn({ method: "POST" })
     let q = admin
       .from("complaints")
       .select(
-        "id, complaint_number, title, category, status, address, description, internal_notes, created_at, user_id, assigned_department_id, municipality_id, attachments(id, storage_path, file_name, mime_type)",
+        "id, complaint_number, title, category, status, address, description, created_at, user_id, assigned_department_id, municipality_id, attachments(id, storage_path, file_name, mime_type)",
       )
       .eq("assigned_department_id", info.department_id)
       // Defense in depth: department belongs to one municipality.
