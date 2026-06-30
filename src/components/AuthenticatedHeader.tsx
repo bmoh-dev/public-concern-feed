@@ -119,11 +119,8 @@ export function AuthenticatedHeader() {
               <Link to="/platform-admin">إدارة المنصّة</Link>
             </Button>
           )}
-          {role?.isGlobalAdmin && (
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/platform-municipalities">اعتماد البلديات</Link>
-            </Button>
-          )}
+
+
           <NotificationsMenu />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
