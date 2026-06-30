@@ -227,10 +227,6 @@ function DeptDetail({ id, row, onClose }: { id: string | null; row: any; onClose
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium">ملاحظات داخلية</label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-            </div>
             <Button onClick={save} disabled={saving} className="w-full">
               {saving ? "جارٍ الحفظ..." : "حفظ"}
             </Button>
