@@ -42,11 +42,11 @@ export function PublicHeader() {
           <span>منصة الشكاوى البلدية</span>
         </Link>
         <nav className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/feed">الشكاوى العامة</Link>
-          </Button>
           {auth.ready && auth.userId ? (
             <>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/feed">الشكاوى العامة</Link>
+              </Button>
               <Button asChild variant="ghost" size="sm">
                 <Link to="/submit">
                   <Plus className="ms-1 h-4 w-4" /> شكوى جديدة
@@ -80,9 +80,16 @@ export function PublicHeader() {
               )}
             </>
           ) : auth.ready ? (
-            <Button asChild>
-              <Link to="/login">دخول</Link>
-            </Button>
+            <>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/login">
+                  <Plus className="ms-1 h-4 w-4" /> قدّم شكوى
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link to="/login">دخول</Link>
+              </Button>
+            </>
           ) : null}
         </nav>
       </div>
