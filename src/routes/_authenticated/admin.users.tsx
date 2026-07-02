@@ -189,8 +189,14 @@ function AdminUsersPage() {
         toast.success("تم نقل المسؤولية");
       } else if (pending.kind === "abandon-super") {
         if (!activeMuni) throw new Error("لا توجد بلدية نشطة");
-        await abandonFn({ data: { municipality_id: activeMuni.id } });
+        const res: any = await abandonFn({ data: { municipality_id: activeMuni.id } });
+        if (res && res.ok === false) {
+          toast.error(res.message ?? "تعذّر تنفيذ الإجراء");
+          setPending(null);
+          return;
+        }
         toast.success("تم التخلي عن دور المسؤول الأعلى");
+
       }
       setPending(null);
       refresh();
