@@ -394,29 +394,35 @@ function AdminUsersPage() {
 
           {promoteDialog?.step === "pick-dept" && (
             <div className="grid gap-3">
-              <Select
-                value={promoteDialog.dept}
-                onValueChange={(v) =>
-                  setPromoteDialog((d) => (d ? { ...d, dept: v } : d))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر القسم..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {(depts as any[]).map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name_ar}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {hasDepts ? (
+                <Select
+                  value={promoteDialog.dept}
+                  onValueChange={(v) =>
+                    setPromoteDialog((d) => (d ? { ...d, dept: v } : d))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر القسم..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deptList.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name_ar}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground rounded-md border border-dashed p-3 text-center">
+                  لا توجد أقسام في هذه البلدية.
+                </p>
+              )}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setPromoteDialog(null)}>
                   إلغاء
                 </Button>
                 <Button
-                  disabled={!promoteDialog.dept}
+                  disabled={!hasDepts || !promoteDialog.dept}
                   onClick={() => {
                     if (!promoteDialog?.dept) return;
                     setPending({
@@ -432,6 +438,7 @@ function AdminUsersPage() {
               </DialogFooter>
             </div>
           )}
+
         </DialogContent>
       </Dialog>
 
