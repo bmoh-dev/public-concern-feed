@@ -244,7 +244,7 @@ function AdminUsersPage() {
     }
   })();
 
-  const selfId = role?.user_id as string | undefined;
+  const selfId = superList?.self_user_id as string | undefined;
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6" dir="rtl">
