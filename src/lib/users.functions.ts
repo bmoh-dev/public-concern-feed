@@ -44,7 +44,12 @@ async function assertSuperAdminOf(userId: string, municipalityId: string): Promi
 export const searchUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({ q: z.string().trim().max(200).optional().default("") }).parse(input),
+    z
+      .object({
+        q: z.string().trim().max(200).optional().default(""),
+        municipality_id: z.string().uuid().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     // Rate limit: 20 searches / minute / user.
@@ -67,25 +72,36 @@ export const searchUsers = createServerFn({ method: "POST" })
       throw e;
     }
 
-    // Limit returned profiles to members of municipalities the caller administers.
-    const muniIds = await requireMunicipalityAdmin(context.userId);
+    // Autocomplete only — never return anything for empty input.
+    const term = data.q.trim();
+    if (!term) return { rows: [], rateLimitMessage: null, rateLimitResetAt: null };
+
+    // Verify the caller administers the target municipality, then scope
+    // STRICTLY to members of that single municipality.
+    const adminMuniIds = await requireMunicipalityAdmin(context.userId);
+    const targetMuni = data.municipality_id ?? adminMuniIds[0];
+    if (!targetMuni || !adminMuniIds.includes(targetMuni)) {
+      throw new AuthzError();
+    }
+    const muniIds = [targetMuni];
+
     const { data: members } = await admin
       .from("municipality_members")
       .select("user_id")
-      .in("municipality_id", muniIds);
+      .eq("municipality_id", targetMuni);
     const memberIds: string[] = Array.from(
       new Set((members ?? []).map((m: any) => m.user_id as string)),
     );
     if (!memberIds.length)
       return { rows: [] as any[], rateLimitMessage: null, rateLimitResetAt: null };
 
-    let query = (supabaseAdmin as any)
+    const query = (supabaseAdmin as any)
       .from("profiles")
       .select("id, full_name, email")
       .in("id", memberIds)
+      .ilike("email", `%${term.replace(/[%_\\]/g, " ")}%`)
       .order("created_at", { ascending: false })
-      .limit(50);
-    if (data.q) query = query.ilike("email", `%${data.q.replace(/[%_\\]/g, " ")}%`);
+      .limit(20);
     const { data: profiles, error } = await query;
     if (error) {
       console.error("[searchUsers]", error);

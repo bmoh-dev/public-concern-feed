@@ -130,12 +130,21 @@ function AdminUsersPage() {
     if (cooldownUntil && cooldownUntil <= now) setCooldownUntil(null);
   }, [cooldownUntil, now]);
 
-  const { data, isLoading } = useQuery<SearchResponse>({
-    queryKey: ["admin-users", q],
-    queryFn: () => searchFn({ data: { q } }) as Promise<SearchResponse>,
-    enabled: !cooling,
+  // Debounce input -> q for autocomplete (300ms).
+  useEffect(() => {
+    const t = window.setTimeout(() => setQ(input.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [input]);
+
+  const { data, isLoading, isFetching } = useQuery<SearchResponse>({
+    queryKey: ["admin-users", activeMuni?.id, q],
+    queryFn: () =>
+      searchFn({
+        data: { q, municipality_id: activeMuni!.id },
+      }) as Promise<SearchResponse>,
+    enabled: !cooling && !!activeMuni?.id && q.length > 0,
   });
-  const rows: Row[] = data?.rows ?? [];
+  const rows: Row[] = q ? data?.rows ?? [] : [];
   useEffect(() => {
     const resetAt = data?.rateLimitResetAt;
     if (resetAt) {
@@ -145,7 +154,14 @@ function AdminUsersPage() {
   }, [data?.rateLimitResetAt]);
   const rateLimitMessage = data?.rateLimitMessage ?? null;
 
-  const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments", activeMuni?.id],
+    queryFn: () =>
+      deptsFn({ data: { municipality_id: activeMuni!.id } }) as Promise<any[]>,
+    enabled: !!activeMuni?.id,
+  });
+  const deptList = depts as any[];
+  const hasDepts = deptList.length > 0;
 
   // Count of super_admins in the current municipality (to protect last-admin).
   const { data: superList } = useQuery({
@@ -156,11 +172,6 @@ function AdminUsersPage() {
   const superAdminCount = (superList?.admins?.length ?? 0) as number;
   const isLastSuper = isGeneralAdmin && superAdminCount <= 1;
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (cooling) return;
-    setQ(input.trim());
-  };
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["admin-users"] });
@@ -264,27 +275,32 @@ function AdminUsersPage() {
 
       <section className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          البحث يقتصر على المستخدمين المسجّلين في بلديتك فقط.
+          اكتب البريد الإلكتروني لعرض المستخدمين في بلديتك.
         </p>
-        <form onSubmit={submit} className="flex gap-2 max-w-xl">
+        <div className="relative max-w-xl">
+          <Search className="absolute top-1/2 right-3 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="ابحث بالبريد الإلكتروني..."
             maxLength={200}
             disabled={cooling}
+            className="pr-9"
+            autoComplete="off"
           />
-          <Button type="submit" disabled={cooling}>
-            <Search className="h-4 w-4 ml-2" />
-            بحث
-          </Button>
-        </form>
+          {isFetching && q && (
+            <Loader2 className="absolute top-1/2 left-3 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
 
         {rateLimitMessage && (
           <div className="whitespace-pre-line rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
             {rateLimitMessage}
           </div>
         )}
+
+        {q && (
+
 
         <div className="border rounded-lg overflow-hidden bg-card">
           <div className="overflow-x-auto">
@@ -335,7 +351,9 @@ function AdminUsersPage() {
             </table>
           </div>
         </div>
+        )}
       </section>
+
 
       {/* Promote citizen — step 1 (choose) / step 2 (pick dept) */}
       <Dialog
@@ -376,29 +394,35 @@ function AdminUsersPage() {
 
           {promoteDialog?.step === "pick-dept" && (
             <div className="grid gap-3">
-              <Select
-                value={promoteDialog.dept}
-                onValueChange={(v) =>
-                  setPromoteDialog((d) => (d ? { ...d, dept: v } : d))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر القسم..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {(depts as any[]).map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name_ar}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {hasDepts ? (
+                <Select
+                  value={promoteDialog.dept}
+                  onValueChange={(v) =>
+                    setPromoteDialog((d) => (d ? { ...d, dept: v } : d))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر القسم..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deptList.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name_ar}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground rounded-md border border-dashed p-3 text-center">
+                  لا توجد أقسام في هذه البلدية.
+                </p>
+              )}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setPromoteDialog(null)}>
                   إلغاء
                 </Button>
                 <Button
-                  disabled={!promoteDialog.dept}
+                  disabled={!hasDepts || !promoteDialog.dept}
                   onClick={() => {
                     if (!promoteDialog?.dept) return;
                     setPending({
@@ -414,6 +438,7 @@ function AdminUsersPage() {
               </DialogFooter>
             </div>
           )}
+
         </DialogContent>
       </Dialog>
 
