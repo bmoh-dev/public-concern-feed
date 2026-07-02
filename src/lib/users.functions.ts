@@ -464,7 +464,8 @@ export const muniAbandonSuperAdmin = createServerFn({ method: "POST" })
     await assertSuperAdminOf(context.userId, data.municipality_id);
     const count = await countSuperAdmins(data.municipality_id);
     if (count <= 1)
-      throw new Error("لا يمكنك التخلي عن دورك لأنك آخر مسؤول أعلى للبلدية");
+      return { ok: false as const, message: "لا يمكنك التخلي عن دورك لأنك آخر مسؤول أعلى للبلدية" };
+
 
     const { error } = await admin
       .from("municipality_members")
