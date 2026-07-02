@@ -351,7 +351,9 @@ function AdminUsersPage() {
             </table>
           </div>
         </div>
+        )}
       </section>
+
 
       {/* Promote citizen — step 1 (choose) / step 2 (pick dept) */}
       <Dialog
