@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -48,7 +48,12 @@ function PlatformMunicipalitiesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">اعتماد البلديات</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-2xl font-bold">اعتماد البلديات</h1>
+        <Button asChild variant="outline">
+          <Link to="/platform-admin">← العودة إلى إدارة المنصة</Link>
+        </Button>
+      </div>
       <div className="flex gap-2">
         {(["all", "pending", "verified", "rejected"] as const).map((s) => (
           <Button
