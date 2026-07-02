@@ -130,12 +130,21 @@ function AdminUsersPage() {
     if (cooldownUntil && cooldownUntil <= now) setCooldownUntil(null);
   }, [cooldownUntil, now]);
 
-  const { data, isLoading } = useQuery<SearchResponse>({
-    queryKey: ["admin-users", q],
-    queryFn: () => searchFn({ data: { q } }) as Promise<SearchResponse>,
-    enabled: !cooling,
+  // Debounce input -> q for autocomplete (300ms).
+  useEffect(() => {
+    const t = window.setTimeout(() => setQ(input.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [input]);
+
+  const { data, isLoading, isFetching } = useQuery<SearchResponse>({
+    queryKey: ["admin-users", activeMuni?.id, q],
+    queryFn: () =>
+      searchFn({
+        data: { q, municipality_id: activeMuni!.id },
+      }) as Promise<SearchResponse>,
+    enabled: !cooling && !!activeMuni?.id && q.length > 0,
   });
-  const rows: Row[] = data?.rows ?? [];
+  const rows: Row[] = q ? data?.rows ?? [] : [];
   useEffect(() => {
     const resetAt = data?.rateLimitResetAt;
     if (resetAt) {
@@ -145,7 +154,14 @@ function AdminUsersPage() {
   }, [data?.rateLimitResetAt]);
   const rateLimitMessage = data?.rateLimitMessage ?? null;
 
-  const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments", activeMuni?.id],
+    queryFn: () =>
+      deptsFn({ data: { municipality_id: activeMuni!.id } }) as Promise<any[]>,
+    enabled: !!activeMuni?.id,
+  });
+  const deptList = depts as any[];
+  const hasDepts = deptList.length > 0;
 
   // Count of super_admins in the current municipality (to protect last-admin).
   const { data: superList } = useQuery({
@@ -156,11 +172,6 @@ function AdminUsersPage() {
   const superAdminCount = (superList?.admins?.length ?? 0) as number;
   const isLastSuper = isGeneralAdmin && superAdminCount <= 1;
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (cooling) return;
-    setQ(input.trim());
-  };
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["admin-users"] });
