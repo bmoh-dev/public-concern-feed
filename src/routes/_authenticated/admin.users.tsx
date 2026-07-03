@@ -130,9 +130,12 @@ function AdminUsersPage() {
     if (cooldownUntil && cooldownUntil <= now) setCooldownUntil(null);
   }, [cooldownUntil, now]);
 
-  // Debounce input -> q for autocomplete (300ms).
+  // Debounce input -> q for autocomplete (300ms). Require ≥ 2 chars before querying.
   useEffect(() => {
-    const t = window.setTimeout(() => setQ(input.trim()), 300);
+    const t = window.setTimeout(() => {
+      const trimmed = input.trim();
+      setQ(trimmed.length >= 2 ? trimmed : "");
+    }, 300);
     return () => window.clearTimeout(t);
   }, [input]);
 
@@ -142,7 +145,7 @@ function AdminUsersPage() {
       searchFn({
         data: { q, municipality_id: activeMuni!.id },
       }) as Promise<SearchResponse>,
-    enabled: !cooling && !!activeMuni?.id && q.length > 0,
+    enabled: !cooling && !!activeMuni?.id && q.length >= 2,
   });
   const rows: Row[] = q ? data?.rows ?? [] : [];
   useEffect(() => {
