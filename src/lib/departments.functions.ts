@@ -385,3 +385,30 @@ export const setDepartmentAdmin = createServerFn({ method: "POST" })
     }
     return { ok: true, role: "department_admin" as const };
   });
+
+// ============ Municipality super-admin: delete a department ============
+// Atomic:
+//   1. UPDATE complaints SET assigned_department_id = NULL WHERE assigned_department_id = X
+//   2. DELETE FROM department_admins WHERE department_id = X   (auto-demotes to citizen)
+//   3. DELETE FROM departments WHERE id = X
+// The complaint's existing `category` value is preserved. Municipality
+// General Admins continue seeing those complaints as unassigned.
+// Isolation is enforced inside the SECURITY DEFINER function: the caller
+// must be super_admin of the department's municipality (verified).
+export const deleteDepartment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ department_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await admin.rpc("delete_department_atomic", {
+      p_caller: context.userId,
+      p_department_id: data.department_id,
+    });
+    if (error) {
+      console.error("[deleteDepartment]", error);
+      if ((error.message || "").includes("forbidden")) throw new AuthzError();
+      throw new Error("تعذّر حذف القسم");
+    }
+    return { ok: true };
+  });
