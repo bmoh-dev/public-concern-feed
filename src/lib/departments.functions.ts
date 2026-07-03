@@ -413,3 +413,142 @@ export const deleteDepartment = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+// ============ Municipality super-admin: department CRUD ============
+
+async function assertSuperAdminOfMuni(userId: string, municipalityId: string) {
+  const { data } = await admin
+    .from("municipality_members")
+    .select("role, municipalities:municipality_id(status)")
+    .eq("user_id", userId)
+    .eq("municipality_id", municipalityId)
+    .eq("role", "super_admin")
+    .maybeSingle();
+  if (!data || (data as any).municipalities?.status !== "verified") {
+    throw new AuthzError();
+  }
+}
+
+export const listDepartmentsWithStats = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ municipality_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdminOfMuni(context.userId, data.municipality_id);
+    const { data: rows, error } = await admin
+      .from("departments")
+      .select("id, slug, name_ar, is_active, municipality_id")
+      .eq("municipality_id", data.municipality_id)
+      .order("name_ar");
+    if (error) {
+      console.error("[listDepartmentsWithStats]", error);
+      throw new Error("تعذّر تحميل الأقسام");
+    }
+    const ids = (rows ?? []).map((r: any) => r.id);
+    if (!ids.length) return [];
+    const [{ data: admins }, { data: complaints }] = await Promise.all([
+      admin.from("department_admins").select("department_id").in("department_id", ids),
+      admin
+        .from("complaints")
+        .select("assigned_department_id")
+        .in("assigned_department_id", ids),
+    ]);
+    const adminCount = new Map<string, number>();
+    (admins ?? []).forEach((a: any) =>
+      adminCount.set(a.department_id, (adminCount.get(a.department_id) ?? 0) + 1),
+    );
+    const complaintCount = new Map<string, number>();
+    (complaints ?? []).forEach((c: any) =>
+      complaintCount.set(
+        c.assigned_department_id,
+        (complaintCount.get(c.assigned_department_id) ?? 0) + 1,
+      ),
+    );
+    return (rows ?? []).map((r: any) => ({
+      ...r,
+      admin_count: adminCount.get(r.id) ?? 0,
+      complaint_count: complaintCount.get(r.id) ?? 0,
+    }));
+  });
+
+function mapRpcError(err: any): Error {
+  const m = (err?.message || "").toLowerCase();
+  if (m.includes("forbidden")) return new AuthzError();
+  if (m.includes("duplicate")) return new Error("يوجد قسم بنفس المعرّف");
+  if (m.includes("not found")) return new Error("القسم غير موجود");
+  if (m.includes("invalid")) return new Error("مدخلات غير صحيحة");
+  return new Error("تعذّر تنفيذ العملية");
+}
+
+export const createDepartment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        municipality_id: z.string().uuid(),
+        slug: z.string().min(2).max(64),
+        name_ar: z.string().min(2).max(120),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: id, error } = await admin.rpc("create_department", {
+      p_caller: context.userId,
+      p_municipality_id: data.municipality_id,
+      p_slug: data.slug,
+      p_name_ar: data.name_ar,
+    });
+    if (error) {
+      console.error("[createDepartment]", error);
+      throw mapRpcError(error);
+    }
+    return { id };
+  });
+
+export const renameDepartment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        department_id: z.string().uuid(),
+        name_ar: z.string().min(2).max(120),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await admin.rpc("rename_department", {
+      p_caller: context.userId,
+      p_department_id: data.department_id,
+      p_name_ar: data.name_ar,
+    });
+    if (error) {
+      console.error("[renameDepartment]", error);
+      throw mapRpcError(error);
+    }
+    return { ok: true };
+  });
+
+export const setDepartmentActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        department_id: z.string().uuid(),
+        is_active: z.boolean(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await admin.rpc("set_department_active", {
+      p_caller: context.userId,
+      p_department_id: data.department_id,
+      p_is_active: data.is_active,
+    });
+    if (error) {
+      console.error("[setDepartmentActive]", error);
+      throw mapRpcError(error);
+    }
+    return { ok: true };
+  });
+
