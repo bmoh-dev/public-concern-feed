@@ -158,15 +158,16 @@ export const submitComplaint = createServerFn({ method: "POST" })
     const targetSlug = CATEGORY_TO_SLUG[data.category];
     const { data: dept } = await admin
       .from("departments")
-      .select("id")
+      .select("id, is_active")
       .eq("municipality_id", data.municipality_id)
       .eq("slug", targetSlug)
       .maybeSingle();
-    if (!dept) {
+    if (!dept || !dept.is_active) {
       throw new Error(
         "لا يمكن استقبال شكاوى من هذه الفئة حالياً — لم يقم مسؤول البلدية بإعداد القسم المسؤول.",
       );
     }
+
 
     const { data: complaint, error } = await (supabase as any)
       .from("complaints")

@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { getMyOnboardingState } from "@/lib/municipalities.functions";
+
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -262,6 +264,42 @@ function SubmitPage() {
   const activeMunicipalityId =
     selectedMunicipality || municipalities[0]?.id || "";
 
+  // Categories are gated by the active departments of the chosen municipality.
+  // Mapping mirrors CATEGORY_TO_SLUG in submitComplaint.
+  const CATEGORY_TO_SLUG: Record<string, string> = {
+    infrastructure: "infrastructure",
+    public_lighting: "public_lighting",
+    cleanliness: "cleaning_environment",
+    other: "general_administration",
+  };
+  const { data: muniDepts } = useQuery({
+    queryKey: ["submit-active-depts", activeMunicipalityId],
+    enabled: !!activeMunicipalityId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("slug, is_active")
+        .eq("municipality_id", activeMunicipalityId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const activeSlugs = new Set(
+    (muniDepts ?? []).filter((d: any) => d.is_active).map((d: any) => d.slug),
+  );
+  const availableCategories = CATEGORIES.filter((c) =>
+    activeSlugs.has(CATEGORY_TO_SLUG[c]),
+  );
+  // Auto-correct current category if it becomes unavailable.
+  useEffect(() => {
+    if (!muniDepts) return;
+    if (availableCategories.length && !availableCategories.includes(category as any)) {
+      setCategory(availableCategories[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMunicipalityId, muniDepts]);
+
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !address.trim() || !description.trim()) {
@@ -272,6 +310,11 @@ function SubmitPage() {
       toast.error("يجب اختيار بلدية");
       return;
     }
+    if (availableCategories.length === 0) {
+      toast.error("لم تُعِدّ هذه البلدية أي قسم لاستقبال الشكاوى");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const attachments = uploads
@@ -418,19 +461,26 @@ function SubmitPage() {
 
         <div>
           <Label>الفئة *</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {CATEGORY_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {availableCategories.length === 0 ? (
+            <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
+              لم تُعِدّ هذه البلدية أي قسم لاستقبال الشكاوى بعد. لا يمكن إرسال شكوى حالياً.
+            </div>
+          ) : (
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCategories.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CATEGORY_LABELS[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
+
 
         <div>
           <Label htmlFor="address">العنوان التفصيلي *</Label>

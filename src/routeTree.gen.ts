@@ -21,6 +21,7 @@ import { Route as AuthenticatedMyComplaintsRouteImport } from './routes/_authent
 import { Route as AuthenticatedDepartmentRouteImport } from './routes/_authenticated/department'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedAdminDepartmentsRouteImport } from './routes/_authenticated/admin.departments'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -84,6 +85,12 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminDepartmentsRoute =
+  AuthenticatedAdminDepartmentsRouteImport.update({
+    id: '/departments',
+    path: '/departments',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/submit': typeof AuthenticatedSubmitRoute
+  '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/submit': typeof AuthenticatedSubmitRoute
+  '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
 }
 export interface FileRoutesById {
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
   '/_authenticated/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/_authenticated/submit': typeof AuthenticatedSubmitRoute
+  '/_authenticated/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
 }
 export interface FileRouteTypes {
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/platform-admin'
     | '/platform-municipalities'
     | '/submit'
+    | '/admin/departments'
     | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/platform-admin'
     | '/platform-municipalities'
     | '/submit'
+    | '/admin/departments'
     | '/admin/users'
   id:
     | '__root__'
@@ -166,6 +178,7 @@ export interface FileRouteTypes {
     | '/_authenticated/platform-admin'
     | '/_authenticated/platform-municipalities'
     | '/_authenticated/submit'
+    | '/_authenticated/admin/departments'
     | '/_authenticated/admin/users'
   fileRoutesById: FileRoutesById
 }
@@ -262,14 +275,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/departments': {
+      id: '/_authenticated/admin/departments'
+      path: '/departments'
+      fullPath: '/admin/departments'
+      preLoaderRoute: typeof AuthenticatedAdminDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminDepartmentsRoute: AuthenticatedAdminDepartmentsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
 }
 
