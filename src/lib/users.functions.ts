@@ -72,9 +72,9 @@ export const searchUsers = createServerFn({ method: "POST" })
       throw e;
     }
 
-    // Autocomplete only — never return anything for empty input.
+    // Autocomplete only — require at least 2 characters before querying.
     const term = data.q.trim();
-    if (!term) return { rows: [], rateLimitMessage: null, rateLimitResetAt: null };
+    if (term.length < 2) return { rows: [], rateLimitMessage: null, rateLimitResetAt: null };
 
     // Verify the caller administers the target municipality, then scope
     // STRICTLY to members of that single municipality.
@@ -100,8 +100,8 @@ export const searchUsers = createServerFn({ method: "POST" })
       .select("id, full_name, email")
       .in("id", memberIds)
       .ilike("email", `%${term.replace(/[%_\\]/g, " ")}%`)
-      .order("created_at", { ascending: false })
-      .limit(20);
+      .order("email", { ascending: true })
+      .limit(10);
     const { data: profiles, error } = await query;
     if (error) {
       console.error("[searchUsers]", error);
