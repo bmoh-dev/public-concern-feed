@@ -209,6 +209,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_active: boolean
           legacy_imported: boolean
           municipality_id: string
           name_ar: string
@@ -217,6 +218,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_active?: boolean
           legacy_imported?: boolean
           municipality_id: string
           name_ar: string
@@ -225,6 +227,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_active?: boolean
           legacy_imported?: boolean
           municipality_id?: string
           name_ar?: string
@@ -494,12 +497,25 @@ export type Database = {
     Functions: {
       abandon_global_admin: { Args: { p_caller: string }; Returns: undefined }
       bootstrap_global_admin: { Args: { p_caller: string }; Returns: undefined }
+      create_department: {
+        Args: {
+          p_caller: string
+          p_municipality_id: string
+          p_name_ar: string
+          p_slug: string
+        }
+        Returns: string
+      }
       delete_department_atomic: {
         Args: { p_caller: string; p_department_id: string }
         Returns: undefined
       }
       promote_global_admin: {
         Args: { p_caller: string; target_user: string }
+        Returns: undefined
+      }
+      rename_department: {
+        Args: { p_caller: string; p_department_id: string; p_name_ar: string }
         Returns: undefined
       }
       rl_check_and_consume:
@@ -525,6 +541,14 @@ export type Database = {
             Returns: Json
           }
       rl_cleanup_old: { Args: never; Returns: undefined }
+      set_department_active: {
+        Args: {
+          p_caller: string
+          p_department_id: string
+          p_is_active: boolean
+        }
+        Returns: undefined
+      }
       transfer_global_admin: {
         Args: { p_caller: string; target_user: string }
         Returns: undefined
