@@ -49,7 +49,7 @@ export const listDepartments = createServerFn({ method: "GET" })
       target && municipalityIds.includes(target) ? [target] : municipalityIds;
     const { data: rows, error } = await admin
       .from("departments")
-      .select("id, slug, name_ar, municipality_id")
+      .select("id, slug, name_ar, municipality_id, is_active")
       .in("municipality_id", muniFilter)
       .order("name_ar");
     if (error) {
@@ -58,6 +58,7 @@ export const listDepartments = createServerFn({ method: "GET" })
     }
     return rows ?? [];
   });
+
 
 export const getMyDepartment = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
