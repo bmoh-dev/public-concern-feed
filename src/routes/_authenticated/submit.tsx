@@ -310,6 +310,11 @@ function SubmitPage() {
       toast.error("يجب اختيار بلدية");
       return;
     }
+    if (availableCategories.length === 0) {
+      toast.error("لم تُعِدّ هذه البلدية أي قسم لاستقبال الشكاوى");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const attachments = uploads
