@@ -144,6 +144,30 @@ export const submitComplaint = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!mem) throw new Error("لست عضواً في هذه البلدية");
 
+    // Server-side routing: resolve assigned_department_id from
+    // (municipality, category). The client never controls this. If the
+    // municipality has no active department for this category, reject the
+    // submission — municipalities with no configured department cannot
+    // receive complaints of that category.
+    const CATEGORY_TO_SLUG: Record<string, string> = {
+      infrastructure: "infrastructure",
+      public_lighting: "public_lighting",
+      cleanliness: "cleaning_environment",
+      other: "general_administration",
+    };
+    const targetSlug = CATEGORY_TO_SLUG[data.category];
+    const { data: dept } = await admin
+      .from("departments")
+      .select("id")
+      .eq("municipality_id", data.municipality_id)
+      .eq("slug", targetSlug)
+      .maybeSingle();
+    if (!dept) {
+      throw new Error(
+        "لا يمكن استقبال شكاوى من هذه الفئة حالياً — لم يقم مسؤول البلدية بإعداد القسم المسؤول.",
+      );
+    }
+
     const { data: complaint, error } = await (supabase as any)
       .from("complaints")
       .insert({
@@ -155,12 +179,13 @@ export const submitComplaint = createServerFn({ method: "POST" })
         description: data.description,
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
+        assigned_department_id: dept.id,
       })
       .select("id")
       .single();
     if (error || !complaint) {
       console.error("[submitComplaint] insert error", error);
-      throw new Error(error?.message || "Failed to submit complaint");
+      throw new Error("تعذّر إرسال الشكوى");
     }
 
     if (data.attachments?.length) {
