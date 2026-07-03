@@ -456,19 +456,26 @@ function SubmitPage() {
 
         <div>
           <Label>الفئة *</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {CATEGORY_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {availableCategories.length === 0 ? (
+            <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
+              لم تُعِدّ هذه البلدية أي قسم لاستقبال الشكاوى بعد. لا يمكن إرسال شكوى حالياً.
+            </div>
+          ) : (
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCategories.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CATEGORY_LABELS[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
+
 
         <div>
           <Label htmlFor="address">العنوان التفصيلي *</Label>
