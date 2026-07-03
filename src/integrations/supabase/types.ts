@@ -494,6 +494,10 @@ export type Database = {
     Functions: {
       abandon_global_admin: { Args: { p_caller: string }; Returns: undefined }
       bootstrap_global_admin: { Args: { p_caller: string }; Returns: undefined }
+      delete_department_atomic: {
+        Args: { p_caller: string; p_department_id: string }
+        Returns: undefined
+      }
       promote_global_admin: {
         Args: { p_caller: string; target_user: string }
         Returns: undefined
