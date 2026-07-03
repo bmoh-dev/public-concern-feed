@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { getMyOnboardingState } from "@/lib/municipalities.functions";
-import { listDepartments } from "@/lib/departments.functions";
+
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
