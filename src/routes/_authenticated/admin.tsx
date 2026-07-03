@@ -177,9 +177,15 @@ function AdminPage() {
             إدارة شكاوى المواطنين وتحديث حالاتها.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/admin/users">إدارة المستخدمين</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link to="/admin/departments">إدارة الأقسام</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/admin/users">إدارة المستخدمين</Link>
+          </Button>
+        </div>
+
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-4">
