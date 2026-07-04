@@ -19,7 +19,20 @@ import {
   validateAttachmentSet,
 } from "@/lib/upload-validation";
 
-const CategoryEnum = z.enum(["infrastructure", "public_lighting", "cleanliness", "other"]);
+const CategoryEnum = z.enum([
+  "infrastructure",
+  "public_lighting",
+  "roads",
+  "water_sewage",
+  "cleanliness",
+  "parks_green",
+  "markets",
+  "traffic_transport",
+  "environment",
+  "public_health",
+  "public_buildings",
+  "other",
+]);
 const StatusEnum = z.enum(["pending", "in_progress", "resolved"]);
 
 const SIGNED_URL_TTL = 3600; // 1 hour
