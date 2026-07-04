@@ -264,40 +264,10 @@ function SubmitPage() {
   const activeMunicipalityId =
     selectedMunicipality || municipalities[0]?.id || "";
 
-  // Categories are gated by the active departments of the chosen municipality.
-  // Mapping mirrors CATEGORY_TO_SLUG in submitComplaint.
-  const CATEGORY_TO_SLUG: Record<string, string> = {
-    infrastructure: "infrastructure",
-    public_lighting: "public_lighting",
-    cleanliness: "cleaning_environment",
-    other: "general_administration",
-  };
-  const { data: muniDepts } = useQuery({
-    queryKey: ["submit-active-depts", activeMunicipalityId],
-    enabled: !!activeMunicipalityId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("departments")
-        .select("slug, is_active")
-        .eq("municipality_id", activeMunicipalityId);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const activeSlugs = new Set(
-    (muniDepts ?? []).filter((d: any) => d.is_active).map((d: any) => d.slug),
-  );
-  const availableCategories = CATEGORIES.filter((c) =>
-    activeSlugs.has(CATEGORY_TO_SLUG[c]),
-  );
-  // Auto-correct current category if it becomes unavailable.
-  useEffect(() => {
-    if (!muniDepts) return;
-    if (availableCategories.length && !availableCategories.includes(category as any)) {
-      setCategory(availableCategories[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMunicipalityId, muniDepts]);
+  // Platform-wide categories are always available regardless of the
+  // municipality's departments. The server routes to a matching active
+  // department if one exists; otherwise the complaint stays unassigned.
+  const availableCategories = CATEGORIES;
 
 
   const onSubmit = async (e: React.FormEvent) => {
