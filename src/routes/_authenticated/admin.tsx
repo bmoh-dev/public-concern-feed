@@ -61,11 +61,15 @@ function AdminPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
-  const [category, setCategory] = useState<string>("all");
+  // Default filter is "General" (formerly "Other") — complaints that are
+  // currently unassigned or belong to the general category. Admins can
+  // switch to "all" or any other category using the existing filter.
+  const [category, setCategory] = useState<string>("other");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [bulkTransferTarget, setBulkTransferTarget] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
 
   // Search rate-limit cooldown: while active, do not fire new search requests.
