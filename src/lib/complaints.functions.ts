@@ -433,7 +433,7 @@ export const bulkTransferComplaints = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: updated, error } = await supabaseAdmin.rpc("bulk_transfer_complaints", {
+    const { data: updated, error } = await (supabaseAdmin as any).rpc("bulk_transfer_complaints", {
       p_caller: context.userId,
       p_complaint_ids: data.ids,
       p_to_department_id: data.to_department_id,
