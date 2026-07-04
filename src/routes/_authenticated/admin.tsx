@@ -285,7 +285,30 @@ function AdminPage() {
           </SelectContent>
         </Select>
         <Button onClick={applyBulk} disabled={selected.size === 0 || !bulkStatus}>
-          تطبيق
+          تحديث الحالة
+        </Button>
+
+        <div className="mx-2 h-6 w-px bg-border" />
+
+        <Select value={bulkTransferTarget} onValueChange={setBulkTransferTarget}>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="إحالة إلى..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={GENERAL_ADMIN}>الإدارة العامة للبلدية</SelectItem>
+            {(transferDepts as any[]).map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name_ar}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          onClick={applyBulkTransfer}
+          disabled={selected.size === 0 || !bulkTransferTarget}
+          variant="secondary"
+        >
+          إحالة
         </Button>
         <div className="flex-1" />
         <Button variant="outline" onClick={exportXlsx}>
