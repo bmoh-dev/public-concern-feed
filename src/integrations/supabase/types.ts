@@ -496,7 +496,19 @@ export type Database = {
     }
     Functions: {
       abandon_global_admin: { Args: { p_caller: string }; Returns: undefined }
+      assign_historical_complaints_to_department: {
+        Args: { p_caller: string; p_department_id: string }
+        Returns: number
+      }
       bootstrap_global_admin: { Args: { p_caller: string }; Returns: undefined }
+      bulk_transfer_complaints: {
+        Args: {
+          p_caller: string
+          p_complaint_ids: string[]
+          p_to_department_id: string
+        }
+        Returns: number
+      }
       create_department: {
         Args: {
           p_caller: string
@@ -509,6 +521,12 @@ export type Database = {
       delete_department_atomic: {
         Args: { p_caller: string; p_department_id: string }
         Returns: undefined
+      }
+      get_user_department: { Args: { p_uid: string }; Returns: string }
+      is_global_admin: { Args: { p_uid: string }; Returns: boolean }
+      is_municipality_admin: {
+        Args: { p_muni: string; p_uid: string }
+        Returns: boolean
       }
       promote_global_admin: {
         Args: { p_caller: string; target_user: string }
@@ -561,6 +579,14 @@ export type Database = {
         | "public_lighting"
         | "cleanliness"
         | "other"
+        | "roads"
+        | "water_sewage"
+        | "parks_green"
+        | "markets"
+        | "traffic_transport"
+        | "environment"
+        | "public_health"
+        | "public_buildings"
       complaint_status: "pending" | "in_progress" | "resolved"
       municipality_status: "pending" | "verified" | "rejected"
     }
@@ -696,6 +722,14 @@ export const Constants = {
         "public_lighting",
         "cleanliness",
         "other",
+        "roads",
+        "water_sewage",
+        "parks_green",
+        "markets",
+        "traffic_transport",
+        "environment",
+        "public_health",
+        "public_buildings",
       ],
       complaint_status: ["pending", "in_progress", "resolved"],
       municipality_status: ["pending", "verified", "rejected"],
