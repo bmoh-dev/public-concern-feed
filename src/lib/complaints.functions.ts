@@ -333,7 +333,13 @@ export const adminListComplaints = createServerFn({ method: "POST" })
       .in("municipality_id", muniIds)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
-    if (data.category) q = q.eq("category", data.category);
+    if (data.category === "other") {
+      // "General" == the "other" category OR complaints not yet assigned
+      // to any department.
+      q = q.or("category.eq.other,assigned_department_id.is.null");
+    } else if (data.category) {
+      q = q.eq("category", data.category);
+    }
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
     if (searchTerm) {
