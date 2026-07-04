@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Loader2, Plus, Pencil, Power, Trash2 } from "lucide-react";
+import { CATEGORIES, CATEGORY_LABELS } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/admin/departments")({
   beforeLoad: ({ location }) => requireAdminRoute(location),
