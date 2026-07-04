@@ -59,7 +59,6 @@ export const Route = createFileRoute("/_authenticated/admin/departments")({
 
 // Departments map 1:1 to platform complaint categories. Each slug is a
 // category enum value; the label comes from CATEGORY_LABELS.
-import { CATEGORIES, CATEGORY_LABELS } from "@/lib/i18n";
 const AVAILABLE_SLUGS: { slug: string; label: string }[] = CATEGORIES.map((c) => ({
   slug: c,
   label: CATEGORY_LABELS[c] ?? c,
