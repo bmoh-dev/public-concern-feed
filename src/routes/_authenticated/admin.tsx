@@ -50,6 +50,8 @@ function AdminPage() {
   const listFn = useServerFn(adminListComplaints);
   const metricsFn = useServerFn(adminMetrics);
   const updateFn = useServerFn(adminUpdate);
+  const bulkTransferFn = useServerFn(bulkTransferComplaints);
+  const listDeptsFn = useServerFn(listDepartments);
   const roleFn = useServerFn(getMyRole);
 
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
