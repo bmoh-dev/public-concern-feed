@@ -147,6 +147,32 @@ function AdminPage() {
     }
   };
 
+  const { data: transferDepts = [] } = useQuery({
+    queryKey: ["admin-departments", activeMunicipality?.id],
+    enabled: !!activeMunicipality?.id,
+    queryFn: () => listDeptsFn({ data: { municipality_id: activeMunicipality!.id } }),
+  });
+
+  const GENERAL_ADMIN = "__general_admin__";
+  const applyBulkTransfer = async () => {
+    if (selected.size === 0 || !bulkTransferTarget) return;
+    try {
+      const r = await bulkTransferFn({
+        data: {
+          ids: Array.from(selected),
+          to_department_id:
+            bulkTransferTarget === GENERAL_ADMIN ? null : bulkTransferTarget,
+        },
+      });
+      toast.success(`تمت إحالة ${r.updated} شكوى`);
+      setSelected(new Set());
+      setBulkTransferTarget("");
+      qc.invalidateQueries({ queryKey: ["admin-complaints"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   const exportXlsx = () => {
     const data = (rows as any[]).map((r) => ({
       "رقم الشكوى": r.complaint_number ?? "",
