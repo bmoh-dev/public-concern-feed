@@ -2,7 +2,8 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { adminListComplaints, adminMetrics, adminUpdate } from "@/lib/complaints.functions";
+import { adminListComplaints, adminMetrics, adminUpdate, bulkTransferComplaints } from "@/lib/complaints.functions";
+import { listDepartments } from "@/lib/departments.functions";
 import { getMyRole } from "@/lib/notifications.functions";
 import { requireAdminRoute } from "@/lib/admin-route-guard";
 import { AttachmentGallery } from "@/components/AttachmentGallery";
@@ -49,6 +50,8 @@ function AdminPage() {
   const listFn = useServerFn(adminListComplaints);
   const metricsFn = useServerFn(adminMetrics);
   const updateFn = useServerFn(adminUpdate);
+  const bulkTransferFn = useServerFn(bulkTransferComplaints);
+  const listDeptsFn = useServerFn(listDepartments);
   const roleFn = useServerFn(getMyRole);
 
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
@@ -60,11 +63,15 @@ function AdminPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
-  const [category, setCategory] = useState<string>("all");
+  // Default filter is "General" (formerly "Other") — complaints that are
+  // currently unassigned or belong to the general category. Admins can
+  // switch to "all" or any other category using the existing filter.
+  const [category, setCategory] = useState<string>("other");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [bulkTransferTarget, setBulkTransferTarget] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
 
   // Search rate-limit cooldown: while active, do not fire new search requests.
@@ -135,6 +142,32 @@ function AdminPage() {
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["admin-complaints"] });
       qc.invalidateQueries({ queryKey: ["admin-metrics"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const { data: transferDepts = [] } = useQuery({
+    queryKey: ["admin-departments", activeMunicipality?.id],
+    enabled: !!activeMunicipality?.id,
+    queryFn: () => listDeptsFn({ data: { municipality_id: activeMunicipality!.id } }),
+  });
+
+  const GENERAL_ADMIN = "__general_admin__";
+  const applyBulkTransfer = async () => {
+    if (selected.size === 0 || !bulkTransferTarget) return;
+    try {
+      const r = await bulkTransferFn({
+        data: {
+          ids: Array.from(selected),
+          to_department_id:
+            bulkTransferTarget === GENERAL_ADMIN ? null : bulkTransferTarget,
+        },
+      });
+      toast.success(`تمت إحالة ${r.updated} شكوى`);
+      setSelected(new Set());
+      setBulkTransferTarget("");
+      qc.invalidateQueries({ queryKey: ["admin-complaints"] });
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -252,7 +285,30 @@ function AdminPage() {
           </SelectContent>
         </Select>
         <Button onClick={applyBulk} disabled={selected.size === 0 || !bulkStatus}>
-          تطبيق
+          تحديث الحالة
+        </Button>
+
+        <div className="mx-2 h-6 w-px bg-border" />
+
+        <Select value={bulkTransferTarget} onValueChange={setBulkTransferTarget}>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="إحالة إلى..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={GENERAL_ADMIN}>الإدارة العامة للبلدية</SelectItem>
+            {(transferDepts as any[]).map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name_ar}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          onClick={applyBulkTransfer}
+          disabled={selected.size === 0 || !bulkTransferTarget}
+          variant="secondary"
+        >
+          إحالة
         </Button>
         <div className="flex-1" />
         <Button variant="outline" onClick={exportXlsx}>

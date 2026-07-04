@@ -266,15 +266,21 @@ export function RedirectSection({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const GENERAL_ADMIN = "__general_admin__";
+
   const submit = async () => {
     if (!target) {
-      toast.error("اختر القسم المستهدف");
+      toast.error("اختر الجهة المستهدفة");
       return;
     }
     setBusy(true);
     try {
       await redirectFn({
-        data: { complaint_id: complaintId, to_department_id: target, reason: reason || undefined },
+        data: {
+          complaint_id: complaintId,
+          to_department_id: target === GENERAL_ADMIN ? null : target,
+          reason: reason || undefined,
+        },
       });
       toast.success("تمت إحالة الشكوى");
       setTarget("");
@@ -292,9 +298,12 @@ export function RedirectSection({
       <div className="font-semibold text-sm">إحالة الشكوى</div>
       <Select value={target} onValueChange={setTarget}>
         <SelectTrigger>
-          <SelectValue placeholder="اختر القسم المستهدف" />
+          <SelectValue placeholder="اختر الجهة المستهدفة" />
         </SelectTrigger>
         <SelectContent>
+          {currentDeptId !== null && (
+            <SelectItem value={GENERAL_ADMIN}>الإدارة العامة للبلدية</SelectItem>
+          )}
           {(depts as any[])
             .filter((d) => d.id !== currentDeptId)
             .map((d: any) => (

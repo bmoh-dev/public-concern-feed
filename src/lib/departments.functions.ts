@@ -171,7 +171,8 @@ export const redirectComplaint = createServerFn({ method: "POST" })
     z
       .object({
         complaint_id: z.string().uuid(),
-        to_department_id: z.string().uuid(),
+        // null = transfer back to Municipality General Admin (unassigned)
+        to_department_id: z.string().uuid().nullable(),
         reason: z.string().max(2000).optional(),
       })
       .parse(input),
@@ -188,25 +189,26 @@ export const redirectComplaint = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!complaint) throw new Error("غير موجود");
 
-    // The actor must either own the source department of this complaint,
-    // or be an admin of the complaint's municipality.
     const isDeptOrigin =
       departmentId && complaint.assigned_department_id === departmentId;
     const isMuniAdmin = municipalityIds.includes(complaint.municipality_id);
     if (!isDeptOrigin && !isMuniAdmin) throw new AuthzError();
 
-    // Target department MUST belong to the SAME municipality as the complaint.
-    const { data: toDept } = await admin
-      .from("departments")
-      .select("id, name_ar, municipality_id")
-      .eq("id", data.to_department_id)
-      .maybeSingle();
-    if (!toDept) throw new Error("القسم غير موجود");
-    if (toDept.municipality_id !== complaint.municipality_id) {
-      throw new AuthzError("لا يمكن إحالة شكوى إلى قسم في بلدية أخرى");
+    let toDeptName = "الإدارة العامة للبلدية";
+    if (data.to_department_id) {
+      const { data: toDept } = await admin
+        .from("departments")
+        .select("id, name_ar, municipality_id")
+        .eq("id", data.to_department_id)
+        .maybeSingle();
+      if (!toDept) throw new Error("القسم غير موجود");
+      if (toDept.municipality_id !== complaint.municipality_id) {
+        throw new AuthzError("لا يمكن إحالة شكوى إلى قسم في بلدية أخرى");
+      }
+      toDeptName = toDept.name_ar;
     }
     if (complaint.assigned_department_id === data.to_department_id) {
-      throw new Error("الشكوى محالة بالفعل إلى هذا القسم");
+      throw new Error("الشكوى محالة بالفعل إلى هذه الجهة");
     }
 
     const fromDeptId = complaint.assigned_department_id;
@@ -232,21 +234,23 @@ export const redirectComplaint = createServerFn({ method: "POST" })
       user_id: complaint.user_id,
       complaint_id: data.complaint_id,
       title: "تمت إحالة شكواك",
-      body: `تمت إحالة شكواك إلى ${toDept.name_ar}`,
+      body: `تمت إحالة شكواك إلى ${toDeptName}`,
     });
 
-    const { data: targetAdmins } = await admin
-      .from("department_admins")
-      .select("user_id")
-      .eq("department_id", data.to_department_id);
-    if (targetAdmins?.length) {
-      const rows = targetAdmins.map((a: any) => ({
-        user_id: a.user_id,
-        complaint_id: data.complaint_id,
-        title: "شكوى جديدة محالة إلى قسمك",
-        body: complaint.title,
-      }));
-      await admin.from("notifications").insert(rows);
+    if (data.to_department_id) {
+      const { data: targetAdmins } = await admin
+        .from("department_admins")
+        .select("user_id")
+        .eq("department_id", data.to_department_id);
+      if (targetAdmins?.length) {
+        const rows = targetAdmins.map((a: any) => ({
+          user_id: a.user_id,
+          complaint_id: data.complaint_id,
+          title: "شكوى جديدة محالة إلى قسمك",
+          body: complaint.title,
+        }));
+        await admin.from("notifications").insert(rows);
+      }
     }
 
     return { ok: true };
@@ -503,7 +507,17 @@ export const createDepartment = createServerFn({ method: "POST" })
       console.error("[createDepartment]", error);
       throw mapRpcError(error);
     }
-    return { id };
+    // Auto-assign historical unassigned, non-resolved complaints of the
+    // matching category to this new department. Solved / already-assigned
+    // complaints are untouched.
+    const { data: assigned, error: assignErr } = await admin.rpc(
+      "assign_historical_complaints_to_department",
+      { p_caller: context.userId, p_department_id: id },
+    );
+    if (assignErr) {
+      console.error("[createDepartment] historical assign", assignErr);
+    }
+    return { id, historical_assigned: (assigned as number) ?? 0 };
   });
 
 export const renameDepartment = createServerFn({ method: "POST" })

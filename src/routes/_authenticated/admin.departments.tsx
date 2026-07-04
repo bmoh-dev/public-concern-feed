@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Loader2, Plus, Pencil, Power, Trash2 } from "lucide-react";
+import { CATEGORIES, CATEGORY_LABELS } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/admin/departments")({
   beforeLoad: ({ location }) => requireAdminRoute(location),
@@ -56,13 +57,12 @@ export const Route = createFileRoute("/_authenticated/admin/departments")({
   ),
 });
 
-// The 4 predefined slugs the backend maps categories to.
-const AVAILABLE_SLUGS: { slug: string; label: string }[] = [
-  { slug: "infrastructure", label: "البنية التحتية" },
-  { slug: "public_lighting", label: "الإنارة العمومية" },
-  { slug: "cleaning_environment", label: "النظافة والبيئة" },
-  { slug: "general_administration", label: "الإدارة العامة (أخرى)" },
-];
+// Departments map 1:1 to platform complaint categories. Each slug is a
+// category enum value; the label comes from CATEGORY_LABELS.
+const AVAILABLE_SLUGS: { slug: string; label: string }[] = CATEGORIES.map((c) => ({
+  slug: c,
+  label: CATEGORY_LABELS[c] ?? c,
+}));
 
 type Row = {
   id: string;

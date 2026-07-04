@@ -19,7 +19,20 @@ import {
   validateAttachmentSet,
 } from "@/lib/upload-validation";
 
-const CategoryEnum = z.enum(["infrastructure", "public_lighting", "cleanliness", "other"]);
+const CategoryEnum = z.enum([
+  "infrastructure",
+  "public_lighting",
+  "roads",
+  "water_sewage",
+  "cleanliness",
+  "parks_green",
+  "markets",
+  "traffic_transport",
+  "environment",
+  "public_health",
+  "public_buildings",
+  "other",
+]);
 const StatusEnum = z.enum(["pending", "in_progress", "resolved"]);
 
 const SIGNED_URL_TTL = 3600; // 1 hour
@@ -144,30 +157,17 @@ export const submitComplaint = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!mem) throw new Error("لست عضواً في هذه البلدية");
 
-    // Server-side routing: resolve assigned_department_id from
-    // (municipality, category). The client never controls this. If the
-    // municipality has no active department for this category, reject the
-    // submission — municipalities with no configured department cannot
-    // receive complaints of that category.
-    const CATEGORY_TO_SLUG: Record<string, string> = {
-      infrastructure: "infrastructure",
-      public_lighting: "public_lighting",
-      cleanliness: "cleaning_environment",
-      other: "general_administration",
-    };
-    const targetSlug = CATEGORY_TO_SLUG[data.category];
+    // Server-side routing: if the municipality has an active department
+    // whose slug matches the selected category, auto-assign it. Otherwise
+    // leave the complaint unassigned — do NOT reject. Municipalities with
+    // zero departments must still receive complaints.
     const { data: dept } = await admin
       .from("departments")
-      .select("id, is_active")
+      .select("id")
       .eq("municipality_id", data.municipality_id)
-      .eq("slug", targetSlug)
+      .eq("slug", data.category)
+      .eq("is_active", true)
       .maybeSingle();
-    if (!dept || !dept.is_active) {
-      throw new Error(
-        "لا يمكن استقبال شكاوى من هذه الفئة حالياً — لم يقم مسؤول البلدية بإعداد القسم المسؤول.",
-      );
-    }
-
 
     const { data: complaint, error } = await (supabase as any)
       .from("complaints")
@@ -180,7 +180,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
         description: data.description,
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
-        assigned_department_id: dept.id,
+        assigned_department_id: dept?.id ?? null,
       })
       .select("id")
       .single();
@@ -333,7 +333,13 @@ export const adminListComplaints = createServerFn({ method: "POST" })
       .in("municipality_id", muniIds)
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);
-    if (data.category) q = q.eq("category", data.category);
+    if (data.category === "other") {
+      // "General" == the "other" category OR complaints not yet assigned
+      // to any department.
+      q = q.or("category.eq.other,assigned_department_id.is.null");
+    } else if (data.category) {
+      q = q.eq("category", data.category);
+    }
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
     if (searchTerm) {
@@ -416,4 +422,31 @@ export const adminUpdate = createServerFn({ method: "POST" })
       throw new Error("تعذّر تحديث الشكاوى");
     }
     return { updated: count ?? 0 };
+  });
+
+// Bulk transfer complaints to a department (or back to Municipality
+// General Admin when to_department_id is null). Caller must be a muni
+// admin of every affected complaint; target dept (if any) must belong to
+// the same municipality. Handled atomically by the DB helper.
+export const bulkTransferComplaints = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        ids: z.array(z.string().uuid()).min(1).max(200),
+        to_department_id: z.string().uuid().nullable(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: updated, error } = await (supabaseAdmin as any).rpc("bulk_transfer_complaints", {
+      p_caller: context.userId,
+      p_complaint_ids: data.ids,
+      p_to_department_id: data.to_department_id,
+    });
+    if (error) {
+      console.error("[bulkTransferComplaints]", error);
+      throw new Error("تعذّر إحالة الشكاوى");
+    }
+    return { updated: (updated as number) ?? 0 };
   });
