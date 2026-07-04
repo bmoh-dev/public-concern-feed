@@ -507,7 +507,17 @@ export const createDepartment = createServerFn({ method: "POST" })
       console.error("[createDepartment]", error);
       throw mapRpcError(error);
     }
-    return { id };
+    // Auto-assign historical unassigned, non-resolved complaints of the
+    // matching category to this new department. Solved / already-assigned
+    // complaints are untouched.
+    const { data: assigned, error: assignErr } = await admin.rpc(
+      "assign_historical_complaints_to_department",
+      { p_caller: context.userId, p_department_id: id },
+    );
+    if (assignErr) {
+      console.error("[createDepartment] historical assign", assignErr);
+    }
+    return { id, historical_assigned: (assigned as number) ?? 0 };
   });
 
 export const renameDepartment = createServerFn({ method: "POST" })
