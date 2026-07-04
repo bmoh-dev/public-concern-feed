@@ -2,7 +2,8 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { adminListComplaints, adminMetrics, adminUpdate } from "@/lib/complaints.functions";
+import { adminListComplaints, adminMetrics, adminUpdate, bulkTransferComplaints } from "@/lib/complaints.functions";
+import { listDepartments } from "@/lib/departments.functions";
 import { getMyRole } from "@/lib/notifications.functions";
 import { requireAdminRoute } from "@/lib/admin-route-guard";
 import { AttachmentGallery } from "@/components/AttachmentGallery";
