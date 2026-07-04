@@ -157,30 +157,17 @@ export const submitComplaint = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!mem) throw new Error("لست عضواً في هذه البلدية");
 
-    // Server-side routing: resolve assigned_department_id from
-    // (municipality, category). The client never controls this. If the
-    // municipality has no active department for this category, reject the
-    // submission — municipalities with no configured department cannot
-    // receive complaints of that category.
-    const CATEGORY_TO_SLUG: Record<string, string> = {
-      infrastructure: "infrastructure",
-      public_lighting: "public_lighting",
-      cleanliness: "cleaning_environment",
-      other: "general_administration",
-    };
-    const targetSlug = CATEGORY_TO_SLUG[data.category];
+    // Server-side routing: if the municipality has an active department
+    // whose slug matches the selected category, auto-assign it. Otherwise
+    // leave the complaint unassigned — do NOT reject. Municipalities with
+    // zero departments must still receive complaints.
     const { data: dept } = await admin
       .from("departments")
-      .select("id, is_active")
+      .select("id")
       .eq("municipality_id", data.municipality_id)
-      .eq("slug", targetSlug)
+      .eq("slug", data.category)
+      .eq("is_active", true)
       .maybeSingle();
-    if (!dept || !dept.is_active) {
-      throw new Error(
-        "لا يمكن استقبال شكاوى من هذه الفئة حالياً — لم يقم مسؤول البلدية بإعداد القسم المسؤول.",
-      );
-    }
-
 
     const { data: complaint, error } = await (supabase as any)
       .from("complaints")
@@ -193,7 +180,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
         description: data.description,
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
-        assigned_department_id: dept.id,
+        assigned_department_id: dept?.id ?? null,
       })
       .select("id")
       .single();
