@@ -417,3 +417,30 @@ export const adminUpdate = createServerFn({ method: "POST" })
     }
     return { updated: count ?? 0 };
   });
+
+// Bulk transfer complaints to a department (or back to Municipality
+// General Admin when to_department_id is null). Caller must be a muni
+// admin of every affected complaint; target dept (if any) must belong to
+// the same municipality. Handled atomically by the DB helper.
+export const bulkTransferComplaints = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        ids: z.array(z.string().uuid()).min(1).max(200),
+        to_department_id: z.string().uuid().nullable(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: updated, error } = await supabaseAdmin.rpc("bulk_transfer_complaints", {
+      p_caller: context.userId,
+      p_complaint_ids: data.ids,
+      p_to_department_id: data.to_department_id,
+    });
+    if (error) {
+      console.error("[bulkTransferComplaints]", error);
+      throw new Error("تعذّر إحالة الشكاوى");
+    }
+    return { updated: (updated as number) ?? 0 };
+  });
