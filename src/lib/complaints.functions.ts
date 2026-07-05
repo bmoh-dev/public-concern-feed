@@ -18,6 +18,7 @@ import {
   ALLOWED_MIME,
   validateAttachmentSet,
 } from "@/lib/upload-validation";
+import { detectSpam } from "@/lib/spam-detection";
 
 const CategoryEnum = z.enum([
   "infrastructure",
