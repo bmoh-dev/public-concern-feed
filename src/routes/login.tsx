@@ -36,6 +36,7 @@ async function resolveLandingPath(): Promise<string> {
       (m: any) => m.role === "super_admin",
     );
     if (isSuperAdmin) return "/admin";
+    if (role.isDepartmentAdmin) return "/department";
     return "/feed";
   } catch {
     return "/feed";

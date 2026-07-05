@@ -29,6 +29,23 @@ export const markNotificationsRead = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteNotifications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ ids: z.array(z.string().uuid()).optional(), all: z.boolean().optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    let q = supabase.from("notifications").delete().eq("user_id", userId);
+    if (!data.all) {
+      if (!data.ids?.length) return { ok: true };
+      q = q.in("id", data.ids);
+    }
+    const { error } = await q;
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const getMyRole = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

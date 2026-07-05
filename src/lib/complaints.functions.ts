@@ -18,6 +18,7 @@ import {
   ALLOWED_MIME,
   validateAttachmentSet,
 } from "@/lib/upload-validation";
+import { detectSpam } from "@/lib/spam-detection";
 
 const CategoryEnum = z.enum([
   "infrastructure",
@@ -96,10 +97,10 @@ export const submitComplaint = createServerFn({ method: "POST" })
     z
       .object({
         municipality_id: z.string().uuid(),
-        title: z.string().min(3).max(200),
+        title: z.string().min(3, "العنوان قصير جداً").max(200),
         category: CategoryEnum,
         address: z.string().min(3).max(500),
-        description: z.string().min(5).max(5000),
+        description: z.string().min(5, "الوصف قصير جداً").max(5000),
         latitude: z.number().min(-90).max(90).nullable().optional(),
         longitude: z.number().min(-180).max(180).nullable().optional(),
         attachments: z
@@ -141,6 +142,16 @@ export const submitComplaint = createServerFn({ method: "POST" })
       const err = validateAttachmentSet(data.attachments);
       if (err) throw new Error(err);
     }
+
+    // Spam / low-quality filter (title + description).
+    const titleErr = detectSpam(data.title, { minLength: 8 });
+    if (titleErr) throw new Error(`العنوان: ${titleErr}`);
+    const descErr = detectSpam(data.description, {
+      minLength: 20,
+      requireMultipleWords: true,
+      minDistinctWords: 3,
+    });
+    if (descErr) throw new Error(`الوصف: ${descErr}`);
 
     // Backend enforcement: verified municipality + membership
     const { data: m } = await admin
