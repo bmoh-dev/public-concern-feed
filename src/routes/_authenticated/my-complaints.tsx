@@ -23,6 +23,8 @@ import { AttachmentGroup } from "@/components/AttachmentLightbox";
 
 export const Route = createFileRoute("/_authenticated/my-complaints")({
   head: () => ({ meta: [{ title: "شكاواي | منصة الشكاوى" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z.object({ open: z.string().uuid().optional() }).parse(s),
   component: MyComplaintsPage,
   errorComponent: ({ error }) => <div className="p-6 text-destructive">خطأ: {error.message}</div>,
 });
