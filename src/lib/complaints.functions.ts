@@ -143,6 +143,16 @@ export const submitComplaint = createServerFn({ method: "POST" })
       if (err) throw new Error(err);
     }
 
+    // Spam / low-quality filter (title + description).
+    const titleErr = detectSpam(data.title, { minLength: 8 });
+    if (titleErr) throw new Error(`العنوان: ${titleErr}`);
+    const descErr = detectSpam(data.description, {
+      minLength: 20,
+      requireMultipleWords: true,
+      minDistinctWords: 3,
+    });
+    if (descErr) throw new Error(`الوصف: ${descErr}`);
+
     // Backend enforcement: verified municipality + membership
     const { data: m } = await admin
       .from("municipalities")
