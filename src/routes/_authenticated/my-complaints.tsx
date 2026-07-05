@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useMemo, useEffect } from "react";
+import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listMyComplaints, getMyComplaint } from "@/lib/complaints.functions";
@@ -22,6 +23,8 @@ import { AttachmentGroup } from "@/components/AttachmentLightbox";
 
 export const Route = createFileRoute("/_authenticated/my-complaints")({
   head: () => ({ meta: [{ title: "شكاواي | منصة الشكاوى" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z.object({ open: z.string().uuid().optional() }).parse(s),
   component: MyComplaintsPage,
   errorComponent: ({ error }) => <div className="p-6 text-destructive">خطأ: {error.message}</div>,
 });
@@ -38,7 +41,16 @@ function MyComplaintsPage() {
   const [category, setCategory] = useState<string>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const search_ = Route.useSearch();
+  const navigate = useNavigate();
+  const [openId, setOpenId] = useState<string | null>(search_.open ?? null);
+  useEffect(() => {
+    if (search_.open) setOpenId(search_.open);
+  }, [search_.open]);
+  const closeDialog = () => {
+    setOpenId(null);
+    if (search_.open) navigate({ to: "/my-complaints", search: {}, replace: true });
+  };
 
   const filtered = useMemo(() => {
     return data.filter((c: any) => {
@@ -135,7 +147,7 @@ function MyComplaintsPage() {
         </div>
       )}
 
-      <ComplaintDetailDialog id={openId} onClose={() => setOpenId(null)} />
+      <ComplaintDetailDialog id={openId} onClose={closeDialog} />
     </div>
   );
 }

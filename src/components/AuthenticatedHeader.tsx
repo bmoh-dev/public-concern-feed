@@ -203,6 +203,8 @@ function NotificationsMenu() {
       qc.invalidateQueries({ queryKey: ["notifications"] });
     }
     if (n.complaint_id) {
+      navigate({ to: "/my-complaints", search: { open: n.complaint_id } });
+    } else {
       navigate({ to: "/my-complaints" });
     }
   };
