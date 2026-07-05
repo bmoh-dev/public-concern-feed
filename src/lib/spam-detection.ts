@@ -21,8 +21,18 @@ function normalize(s: string): string {
 }
 
 function hasExcessiveRepetition(s: string): boolean {
-  // Reject any run of the same non-space character 5+ times in a row.
-  return /(\S)\1{4,}/u.test(s);
+  // Reject only when repetition dominates the text: either a very long run
+  // (7+ identical chars) or the longest run covers >= 50% of non-space chars,
+  // or the text has fewer than 3 distinct non-space chars.
+  const compact = s.replace(/\s+/g, "");
+  if (compact.length === 0) return false;
+  const distinct = new Set(compact).size;
+  if (compact.length >= 5 && distinct < 3) return true;
+  const m = compact.match(/(\S)\1{6,}/u);
+  if (m) return true;
+  const longest = compact.match(/(\S)\1{3,}/u);
+  if (longest && longest[0].length >= Math.ceil(compact.length / 2)) return true;
+  return false;
 }
 
 function containsKeyboardSmash(s: string): boolean {
