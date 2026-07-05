@@ -97,10 +97,10 @@ export const submitComplaint = createServerFn({ method: "POST" })
     z
       .object({
         municipality_id: z.string().uuid(),
-        title: z.string().min(3).max(200),
+        title: z.string().min(3, "العنوان قصير جداً").max(200),
         category: CategoryEnum,
         address: z.string().min(3).max(500),
-        description: z.string().min(5).max(5000),
+        description: z.string().min(5, "الوصف قصير جداً").max(5000),
         latitude: z.number().min(-90).max(90).nullable().optional(),
         longitude: z.number().min(-180).max(180).nullable().optional(),
         attachments: z
