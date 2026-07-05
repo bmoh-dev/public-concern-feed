@@ -155,8 +155,10 @@ export function AuthenticatedHeader() {
 
 function NotificationsMenu() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const listFn = useServerFn(listNotifications);
   const markFn = useServerFn(markNotificationsRead);
+  const deleteFn = useServerFn(deleteNotifications);
   const { data: notifs = [] } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => listFn(),
@@ -195,6 +197,28 @@ function NotificationsMenu() {
 
   const unread = notifs.filter((n) => !n.read).length;
 
+  const openComplaint = async (n: any) => {
+    if (!n.read) {
+      await markFn({ data: { ids: [n.id] } });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    }
+    if (n.complaint_id) {
+      navigate({ to: "/my-complaints" });
+    }
+  };
+  const markOne = async (id: string) => {
+    await markFn({ data: { ids: [id] } });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  };
+  const deleteOne = async (id: string) => {
+    await deleteFn({ data: { ids: [id] } });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  };
+  const deleteAll = async () => {
+    await deleteFn({ data: { all: true } });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -207,31 +231,46 @@ function NotificationsMenu() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="flex items-center justify-between">
+      <DropdownMenuContent align="end" className="w-96">
+        <DropdownMenuLabel className="flex items-center justify-between gap-2">
           <span>الإشعارات</span>
-          {unread > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={async () => {
-                await markFn({ data: {} });
-                qc.invalidateQueries({ queryKey: ["notifications"] });
-              }}
-            >
-              تعليم الكل كمقروء
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {unread > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  await markFn({ data: {} });
+                  qc.invalidateQueries({ queryKey: ["notifications"] });
+                }}
+              >
+                تعليم الكل كمقروء
+              </Button>
+            )}
+            {notifs.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={deleteAll}
+              >
+                حذف الكل
+              </Button>
+            )}
+          </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {notifs.length === 0 && (
           <div className="p-4 text-center text-sm text-muted-foreground">لا توجد إشعارات</div>
         )}
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto">
           {notifs.map((n) => (
-            <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1">
+            <div
+              key={n.id}
+              className="flex flex-col gap-1 border-b px-2 py-2 last:border-b-0 hover:bg-muted/50"
+            >
               <div className="flex w-full items-center justify-between gap-2">
-                <span className="font-medium">{n.title}</span>
+                <span className="font-medium text-sm">{n.title}</span>
                 {!n.read && (
                   <Badge variant="default" className="text-[10px]">
                     جديد
@@ -239,10 +278,42 @@ function NotificationsMenu() {
                 )}
               </div>
               {n.body && <div className="text-xs text-muted-foreground">{n.body}</div>}
-              <div className="text-[10px] text-muted-foreground">
-                {new Date(n.created_at).toLocaleString("ar")}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="text-[10px] text-muted-foreground">
+                  {new Date(n.created_at).toLocaleString("ar")}
+                </div>
+                <div className="flex items-center gap-1">
+                  {n.complaint_id && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => openComplaint(n)}
+                    >
+                      <ExternalLink className="ms-1 h-3 w-3" /> فتح
+                    </Button>
+                  )}
+                  {!n.read && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => markOne(n.id)}
+                    >
+                      <Check className="ms-1 h-3 w-3" /> مقروء
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                    onClick={() => deleteOne(n.id)}
+                  >
+                    <Trash2 className="ms-1 h-3 w-3" /> حذف
+                  </Button>
+                </div>
               </div>
-            </DropdownMenuItem>
+            </div>
           ))}
         </div>
       </DropdownMenuContent>
