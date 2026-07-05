@@ -140,18 +140,20 @@ export const submitComplaint = createServerFn({ method: "POST" })
     // Server-side attachment shape validation (mime / size / counts).
     if (data.attachments?.length) {
       const err = validateAttachmentSet(data.attachments);
-      if (err) throw new Error(err);
+      if (err) return { error: err } as const;
     }
 
-    // Spam / low-quality filter (title + description).
+    // Spam / low-quality filter (title + description). Returned as a
+    // validation result (not thrown) so the client shows the message
+    // without triggering a runtime-error overlay.
     const titleErr = detectSpam(data.title, { minLength: 8 });
-    if (titleErr) throw new Error(`العنوان: ${titleErr}`);
+    if (titleErr) return { error: `العنوان: ${titleErr}` } as const;
     const descErr = detectSpam(data.description, {
       minLength: 20,
       requireMultipleWords: true,
       minDistinctWords: 3,
     });
-    if (descErr) throw new Error(`الوصف: ${descErr}`);
+    if (descErr) return { error: `الوصف: ${descErr}` } as const;
 
     // Backend enforcement: verified municipality + membership
     const { data: m } = await admin
