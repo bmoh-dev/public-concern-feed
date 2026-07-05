@@ -41,7 +41,16 @@ function MyComplaintsPage() {
   const [category, setCategory] = useState<string>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const search_ = Route.useSearch();
+  const navigate = useNavigate();
+  const [openId, setOpenId] = useState<string | null>(search_.open ?? null);
+  useEffect(() => {
+    if (search_.open) setOpenId(search_.open);
+  }, [search_.open]);
+  const closeDialog = () => {
+    setOpenId(null);
+    if (search_.open) navigate({ to: "/my-complaints", search: {}, replace: true });
+  };
 
   const filtered = useMemo(() => {
     return data.filter((c: any) => {
