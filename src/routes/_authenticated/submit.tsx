@@ -304,6 +304,11 @@ function SubmitPage() {
           attachments,
         },
       });
+      if (result && "error" in result && result.error) {
+        toast.error(result.error);
+        setSubmitting(false);
+        return;
+      }
       console.log("[submitComplaint] success", result);
       submittedRef.current = true;
       if (draftKey) {
