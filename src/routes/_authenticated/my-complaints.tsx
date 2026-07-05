@@ -147,7 +147,7 @@ function MyComplaintsPage() {
         </div>
       )}
 
-      <ComplaintDetailDialog id={openId} onClose={() => setOpenId(null)} />
+      <ComplaintDetailDialog id={openId} onClose={closeDialog} />
     </div>
   );
 }
