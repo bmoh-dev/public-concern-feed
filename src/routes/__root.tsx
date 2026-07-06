@@ -78,14 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "بلدية - منصة الشكاوى" },
+      { name: "description", content: "منصة بلدية لتقديم وتتبع الشكاوى وعرض الشفافية العامة." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "بلدية - منصة الشكاوى" },
+      { property: "og:description", content: "منصة بلدية لتقديم وتتبع الشكاوى وعرض الشفافية العامة." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "بلدية - منصة الشكاوى" },
+      { name: "twitter:description", content: "منصة بلدية لتقديم وتتبع الشكاوى وعرض الشفافية العامة." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/FmE9cTEUHmbY5VOh7WAS2r4HPbh2/social-images/social-1783305535833-ChatGPT_Image_Jul_5,_2026,_05_39_53_PM.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/FmE9cTEUHmbY5VOh7WAS2r4HPbh2/social-images/social-1783305535833-ChatGPT_Image_Jul_5,_2026,_05_39_53_PM.webp" },
     ],
     links: [
       {
