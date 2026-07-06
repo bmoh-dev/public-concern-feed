@@ -183,9 +183,14 @@ function PlatformAdminPage() {
             إدارة مسؤولي المنصّة فقط. إدارة البلديات تتم من صفحاتها الخاصة.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/platform-municipalities">طلبات اعتماد البلديات</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/platform-municipalities">طلبات اعتماد البلديات</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/platform-feedback">ملاحظات المستخدمين</Link>
+          </Button>
+        </div>
       </div>
 
       <section className="rounded-xl border bg-card p-5 space-y-4">
