@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSubmitRouteImport } from './routes/_authenticated/submit'
 import { Route as AuthenticatedPlatformMunicipalitiesRouteImport } from './routes/_authenticated/platform-municipalities'
+import { Route as AuthenticatedPlatformFeedbackRouteImport } from './routes/_authenticated/platform-feedback'
 import { Route as AuthenticatedPlatformAdminRouteImport } from './routes/_authenticated/platform-admin'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMyComplaintsRouteImport } from './routes/_authenticated/my-complaints'
@@ -51,6 +52,12 @@ const AuthenticatedPlatformMunicipalitiesRoute =
   AuthenticatedPlatformMunicipalitiesRouteImport.update({
     id: '/platform-municipalities',
     path: '/platform-municipalities',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlatformFeedbackRoute =
+  AuthenticatedPlatformFeedbackRouteImport.update({
+    id: '/platform-feedback',
+    path: '/platform-feedback',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedPlatformAdminRoute =
@@ -101,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/platform-feedback': typeof AuthenticatedPlatformFeedbackRoute
   '/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/platform-feedback': typeof AuthenticatedPlatformFeedbackRoute
   '/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/submit': typeof AuthenticatedSubmitRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
@@ -131,6 +140,7 @@ export interface FileRoutesById {
   '/_authenticated/my-complaints': typeof AuthenticatedMyComplaintsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/platform-admin': typeof AuthenticatedPlatformAdminRoute
+  '/_authenticated/platform-feedback': typeof AuthenticatedPlatformFeedbackRoute
   '/_authenticated/platform-municipalities': typeof AuthenticatedPlatformMunicipalitiesRoute
   '/_authenticated/submit': typeof AuthenticatedSubmitRoute
   '/_authenticated/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/my-complaints'
     | '/onboarding'
     | '/platform-admin'
+    | '/platform-feedback'
     | '/platform-municipalities'
     | '/submit'
     | '/admin/departments'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/my-complaints'
     | '/onboarding'
     | '/platform-admin'
+    | '/platform-feedback'
     | '/platform-municipalities'
     | '/submit'
     | '/admin/departments'
@@ -176,6 +188,7 @@ export interface FileRouteTypes {
     | '/_authenticated/my-complaints'
     | '/_authenticated/onboarding'
     | '/_authenticated/platform-admin'
+    | '/_authenticated/platform-feedback'
     | '/_authenticated/platform-municipalities'
     | '/_authenticated/submit'
     | '/_authenticated/admin/departments'
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       path: '/platform-municipalities'
       fullPath: '/platform-municipalities'
       preLoaderRoute: typeof AuthenticatedPlatformMunicipalitiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/platform-feedback': {
+      id: '/_authenticated/platform-feedback'
+      path: '/platform-feedback'
+      fullPath: '/platform-feedback'
+      preLoaderRoute: typeof AuthenticatedPlatformFeedbackRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/platform-admin': {
@@ -304,6 +324,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMyComplaintsRoute: typeof AuthenticatedMyComplaintsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPlatformAdminRoute: typeof AuthenticatedPlatformAdminRoute
+  AuthenticatedPlatformFeedbackRoute: typeof AuthenticatedPlatformFeedbackRoute
   AuthenticatedPlatformMunicipalitiesRoute: typeof AuthenticatedPlatformMunicipalitiesRoute
   AuthenticatedSubmitRoute: typeof AuthenticatedSubmitRoute
 }
@@ -314,6 +335,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMyComplaintsRoute: AuthenticatedMyComplaintsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPlatformAdminRoute: AuthenticatedPlatformAdminRoute,
+  AuthenticatedPlatformFeedbackRoute: AuthenticatedPlatformFeedbackRoute,
   AuthenticatedPlatformMunicipalitiesRoute:
     AuthenticatedPlatformMunicipalitiesRoute,
   AuthenticatedSubmitRoute: AuthenticatedSubmitRoute,
@@ -332,13 +354,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -35,6 +36,7 @@ function AuthLayout() {
       <main className="container mx-auto max-w-6xl px-4 py-6">
         <Outlet />
       </main>
+      <FeedbackButton />
     </div>
   );
 }
